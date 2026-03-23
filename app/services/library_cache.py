@@ -360,19 +360,26 @@ def run_scan(media_path: Path) -> None:
         found_paths.add(str(f))
         try:
             mtime = f.stat().st_mtime
-            if get_cached_track(conn, str(f), mtime) is None:
+            cached = get_cached_track(conn, str(f), mtime)
+            needs_update = cached is None or (
+                cached.get("has_cover") and cached.get("cover_w") is None
+            )
+            if needs_update:
                 audio = FLAC(str(f))
                 tags: dict[str, str] = {}
                 if audio.tags:
                     for key, values in audio.tags.as_dict().items():
                         tags[key.lower()] = values[0] if len(values) == 1 else "; ".join(values)
-                has_cover = any(pic.type == 3 for pic in audio.pictures)
+                cover_pic = next((pic for pic in audio.pictures if pic.type == 3), None)
+                has_cover = cover_pic is not None
                 upsert_track(conn, str(f), {
                     "mtime": mtime,
                     "artist_dir": f.parent.parent.name,
                     "album_dir": f.parent.name,
                     "filename": f.name,
                     "has_cover": has_cover,
+                    "cover_w": cover_pic.width if cover_pic else None,
+                    "cover_h": cover_pic.height if cover_pic else None,
                     "sample_rate": audio.info.sample_rate,
                     "bits": audio.info.bits_per_sample,
                     "channels": audio.info.channels,
