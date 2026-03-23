@@ -40,6 +40,15 @@ async def album_editor(request: Request, path: str, _: str = Depends(require_aut
             f'<div class="empty-state"><p>No FLAC files found in<br><code>{folder}</code></p></div>'
         )
 
+    # Merge cached Navidrome data into each track so the editor auto-populates.
+    navi_cache = library_cache.get_navidrome_for_album(conn, folder.parent.name, folder.name)
+    for track in album["tracks"]:
+        nd = navi_cache.get(track["path"])
+        track["navi_id"] = nd["navi_id"] if nd else None
+        track["navi_play_count"] = nd["play_count"] if nd else None
+        track["navi_starred"] = bool(nd["starred"]) if nd else False
+        track["navi_user_rating"] = nd["user_rating"] if nd else 0
+
     return templates.TemplateResponse(request, "partials/album_editor.html", {
         "album": album,
         "organize_enabled": settings.organize_target is not None,

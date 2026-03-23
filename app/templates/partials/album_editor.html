@@ -35,6 +35,17 @@
       <span>{{ album.stats.track_count }} track{{ 's' if album.stats.track_count != 1 }}</span>
       <span class="rg-badge" x-show="hasRG" {% if not album.stats.has_replaygain %}style="display:none"{% endif %}>RG</span>
       <span class="ly-badge" x-show="hasLyrics" {% if not album.stats.has_lyrics %}style="display:none"{% endif %}>LY</span>
+      {% if navidrome_enabled %}
+      <span x-show="naviHasData"
+            :style="naviStarred ? 'color:var(--danger)' : 'color:var(--text-dim);opacity:0.4'"
+            style="font-size:13px;line-height:1"
+            :title="naviStarred ? 'Favorited in Navidrome' : 'Not favorited'">&#x2665;</span>
+      <span x-show="naviHasData && naviAvgRating > 0" class="navi-stars" title="Avg Navidrome rating">
+        <template x-for="s in [1,2,3,4,5]" :key="s">
+          <span class="navi-star" :class="{ 'navi-star-on': s <= naviAvgRating }">&#x2605;</span>
+        </template>
+      </span>
+      {% endif %}
     </div>
     {% endif %}
   </div>
@@ -162,13 +173,18 @@
       <button class="btn" @click="organizeFiles()">Organize Files</button>
       {% endif %}
       {% if navidrome_enabled %}
-      <button class="btn" @click="navScan()">Navidrome Scan</button>
+      <button class="btn" @click="fetchNaviData()" :disabled="naviLoading"
+              x-text="naviLoading ? 'Fetching\u2026' : 'Navidrome Fetch'"></button>
       {% endif %}
     </div>
     <div class="action-group" x-show="deleteEnabled" style="margin-left: auto">
       <button class="btn btn-danger" @click="trashAlbum()">Move to Trash</button>
     </div>
   </div>
+
+  {% if navidrome_enabled %}
+  <div x-show="naviError" x-cloak style="padding:4px 12px;font-size:12px;color:var(--danger)" x-text="naviError"></div>
+  {% endif %}
 
   <!-- ── Track table ───────────────────────────────────────── -->
   <div class="track-section">
@@ -184,6 +200,11 @@
             <th>Title</th>
             <th>Artist</th>
             <th style="width:120px">MBID Track</th>
+            {% if navidrome_enabled %}
+            <th style="width:24px" title="Navidrome Favorite">&#x2665;</th>
+            <th style="width:80px" title="Navidrome Rating">&#x2605;</th>
+            <th style="width:36px" title="Play Count">&#x25B6;</th>
+            {% endif %}
             <th style="width:24px" title="Lyrics">♪</th>
             <th style="width:72px"></th>
           </tr>
@@ -215,6 +236,30 @@
                        @click.stop
                        class="monospace small-input">
               </td>
+              {% if navidrome_enabled %}
+              <td style="text-align:center" @click.stop>
+                <button x-show="track.navi_id" class="btn-icon navi-heart"
+                        :class="{ 'navi-heart-on': track.navi_starred }"
+                        @click="navToggleStar(track)"
+                        :title="track.navi_starred ? 'Unfavorite' : 'Favorite'">&#x2665;</button>
+                <span x-show="!track.navi_id" style="color:var(--border)">&#x2665;</span>
+              </td>
+              <td style="text-align:center;white-space:nowrap" @click.stop>
+                <span x-show="track.navi_id" class="navi-stars">
+                  <template x-for="s in [1,2,3,4,5]" :key="s">
+                    <button class="btn-icon navi-star"
+                            :class="{ 'navi-star-on': s <= track.navi_user_rating }"
+                            @click="navSetRating(track, s)"
+                            :title="s + ' star' + (s > 1 ? 's' : '')">&#x2605;</button>
+                  </template>
+                </span>
+                <span x-show="!track.navi_id" style="color:var(--border);font-size:11px">—</span>
+              </td>
+              <td style="text-align:center;font-size:11px;color:var(--text-dim)">
+                <span x-show="track.navi_id" x-text="track.navi_play_count ?? '—'"></span>
+                <span x-show="!track.navi_id" style="color:var(--border)">—</span>
+              </td>
+              {% endif %}
               <td style="text-align:center;font-size:13px"
                   :title="track.has_lrc ? 'Synced .lrc file' : track.has_lyrics_tag ? 'Embedded lyrics' : 'No lyrics'"
                   :style="track.has_lrc ? 'color:var(--success)' : track.has_lyrics_tag ? 'color:var(--accent)' : 'color:var(--text-dim);opacity:0.4'">♪</td>
@@ -301,7 +346,11 @@ function albumEditor(data) {
       has_cover: t.has_cover,
       has_lrc: t.has_lrc || false,
       has_lyrics_tag: t.has_lyrics_tag || false,
-      tags: Object.assign({ title: '', artist: '', tracknumber: '', musicbrainz_trackid: '' }, t.tags)
+      tags: Object.assign({ title: '', artist: '', tracknumber: '', musicbrainz_trackid: '' }, t.tags),
+      navi_id: t.navi_id || null,
+      navi_play_count: t.navi_play_count ?? null,
+      navi_starred: t.navi_starred || false,
+      navi_user_rating: t.navi_user_rating || 0,
     })),
     selectedTrack: null,
     playerSrc: '',
@@ -320,8 +369,23 @@ function albumEditor(data) {
     hasRG: data.stats?.has_replaygain || false,
     hasLyrics: data.stats?.has_lyrics || false,
     deleteEnabled: typeof isDeleteEnabled === 'function' ? isDeleteEnabled() : false,
+    naviLoading: false,
+    naviError: '',
+    naviAlbumId: null,
     _origShared: null,
     _origTracks: null,
+
+    get naviHasData() {
+      return this.tracks.some(t => t.navi_id);
+    },
+    get naviStarred() {
+      return this.tracks.some(t => t.navi_starred);
+    },
+    get naviAvgRating() {
+      const rated = this.tracks.filter(t => t.navi_id && t.navi_user_rating > 0);
+      if (!rated.length) return 0;
+      return Math.round(rated.reduce((sum, t) => sum + t.navi_user_rating, 0) / rated.length);
+    },
 
     get isDirty() {
       return JSON.stringify(this.shared) !== this._origShared ||
@@ -569,6 +633,73 @@ function albumEditor(data) {
       });
       const data = await resp.json();
       showNotification(resp.ok ? data.message : (data.detail || 'Scan failed'), !resp.ok);
+    },
+
+    async fetchNaviData() {
+      this.naviLoading = true;
+      this.naviError = '';
+      const artist = encodeURIComponent(this.shared.albumartist || '');
+      const album  = encodeURIComponent(this.shared.album || '');
+      const resp = await fetch(`/api/navidrome/album?albumartist=${artist}&album=${album}`);
+      this.naviLoading = false;
+      if (!resp.ok) {
+        const d = await resp.json().catch(() => ({}));
+        this.naviError = d.detail || 'Navidrome lookup failed';
+        return;
+      }
+      const data = await resp.json();
+      this.naviAlbumId = data.album_id;
+      const byTrackNum = {};
+      for (const nt of data.tracks) {
+        const disc  = nt.disc_number || 1;
+        const key   = `${disc}:${nt.track}`;
+        byTrackNum[key] = nt;
+      }
+      for (const t of this.tracks) {
+        const disc  = parseInt(t.tags.discnumber, 10) || 1;
+        const track = parseInt(t.tags.tracknumber, 10);
+        const key   = `${disc}:${track}`;
+        const nt    = byTrackNum[key];
+        if (nt) {
+          t.navi_id         = nt.id;
+          t.navi_play_count = nt.play_count;
+          t.navi_starred    = nt.starred;
+          t.navi_user_rating = nt.user_rating;
+        }
+      }
+      const matched = this.tracks.filter(t => t.navi_id).length;
+      showNotification(`Navidrome: ${matched} of ${this.tracks.length} tracks matched`);
+    },
+
+    async navToggleStar(track) {
+      if (!track.navi_id) return;
+      const newVal = !track.navi_starred;
+      track.navi_starred = newVal;
+      const resp = await fetch('/api/navidrome/star', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ song_id: track.navi_id, star: newVal })
+      });
+      if (!resp.ok) {
+        track.navi_starred = !newVal;
+        showNotification('Star update failed', true);
+      }
+    },
+
+    async navSetRating(track, rating) {
+      if (!track.navi_id) return;
+      const prev = track.navi_user_rating;
+      const newRating = rating === prev ? 0 : rating;
+      track.navi_user_rating = newRating;
+      const resp = await fetch('/api/navidrome/rating', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ song_id: track.navi_id, rating: newRating })
+      });
+      if (!resp.ok) {
+        track.navi_user_rating = prev;
+        showNotification('Rating update failed', true);
+      }
     },
 
     uploadCover(event) {

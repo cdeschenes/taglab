@@ -8,6 +8,41 @@
     <p style="font-size: 13px; color: var(--text-dim); margin: 0;">Click, drag, or paste a URL to replace artwork</p>
   </div>
 
+  <!-- Filter / sort bar -->
+  <div id="album-filters" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+    <input type="hidden" name="limit" value="{{ limit }}">
+    <label style="font-size:12px;color:var(--text-dim);white-space:nowrap;">Sort</label>
+    <select name="sort" class="settings-select"
+            hx-get="/ui/cover-cleanup" hx-trigger="change"
+            hx-target="#cover-cleanup" hx-swap="outerHTML"
+            hx-include="#album-filters">
+      <option value="name"{{ ' selected' if sort == 'name' }}>Name (A–Z)</option>
+      <option value="recently_added"{{ ' selected' if sort == 'recently_added' }}>Recently Added</option>
+      <option value="cover_size"{{ ' selected' if sort == 'cover_size' }}>Size (small → large)</option>
+    </select>
+    {% if navidrome_enabled %}
+    <label style="font-size:12px;color:var(--text-dim);white-space:nowrap;margin-left:8px;">Navidrome</label>
+    <select name="starred_only" class="settings-select"
+            hx-get="/ui/cover-cleanup" hx-trigger="change"
+            hx-target="#cover-cleanup" hx-swap="outerHTML"
+            hx-include="#album-filters">
+      <option value="false"{{ ' selected' if not starred_only }}>All Albums</option>
+      <option value="true"{{ ' selected' if starred_only }}>Favorites Only</option>
+    </select>
+    <select name="min_rating" class="settings-select"
+            hx-get="/ui/cover-cleanup" hx-trigger="change"
+            hx-target="#cover-cleanup" hx-swap="outerHTML"
+            hx-include="#album-filters">
+      <option value="0"{{ ' selected' if min_rating == 0 }}>Any Rating</option>
+      <option value="1"{{ ' selected' if min_rating == 1 }}>&#9733; 1+</option>
+      <option value="2"{{ ' selected' if min_rating == 2 }}>&#9733;&#9733; 2+</option>
+      <option value="3"{{ ' selected' if min_rating == 3 }}>&#9733;&#9733;&#9733; 3+</option>
+      <option value="4"{{ ' selected' if min_rating == 4 }}>&#9733;&#9733;&#9733;&#9733; 4+</option>
+      <option value="5"{{ ' selected' if min_rating == 5 }}>&#9733;&#9733;&#9733;&#9733;&#9733; 5</option>
+    </select>
+    {% endif %}
+  </div>
+
   {% if not albums and total == 0 %}
   <div class="empty-state">
     <p>No albums indexed yet. The library scan may still be in progress.</p>
@@ -91,10 +126,11 @@
   </div>
 
   {% if total_pages > 1 %}
+  {% set fqs = "&sort=" ~ sort ~ "&min_rating=" ~ min_rating ~ "&starred_only=" ~ ("true" if starred_only else "false") %}
   <div style="display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap;">
     {% if page > 1 %}
     <button class="btn btn-sm"
-            hx-get="/ui/cover-cleanup?page={{ page - 1 }}&limit={{ limit }}"
+            hx-get="/ui/cover-cleanup?page={{ page - 1 }}&limit={{ limit }}{{ fqs }}"
             hx-target="#cover-cleanup"
             hx-swap="outerHTML">← Prev</button>
     {% else %}
@@ -108,7 +144,7 @@
 
     {% if page < total_pages %}
     <button class="btn btn-sm"
-            hx-get="/ui/cover-cleanup?page={{ page + 1 }}&limit={{ limit }}"
+            hx-get="/ui/cover-cleanup?page={{ page + 1 }}&limit={{ limit }}{{ fqs }}"
             hx-target="#cover-cleanup"
             hx-swap="outerHTML">Next →</button>
     {% else %}

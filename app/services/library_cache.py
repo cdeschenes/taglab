@@ -57,6 +57,17 @@ def _init_schema(conn: sqlite3.Connection) -> None:
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_album ON tracks(artist_dir, album_dir)")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS navidrome_tracks (
+            path        TEXT PRIMARY KEY,
+            navi_id     TEXT NOT NULL,
+            play_count  INTEGER NOT NULL DEFAULT 0,
+            starred     INTEGER NOT NULL DEFAULT 0,
+            user_rating INTEGER NOT NULL DEFAULT 0,
+            synced_at   REAL NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_navi_id ON navidrome_tracks(navi_id)")
     conn.commit()
 
 
@@ -116,6 +127,69 @@ def get_all_albums(conn: sqlite3.Connection) -> list[dict]:
             "all_flacs": [r["path"] for r in all_flacs],
             "track_count": row["track_count"],
             "has_cover": bool(row["has_cover"]),
+        })
+    return result
+
+
+def get_all_albums_filtered(
+    conn: sqlite3.Connection,
+    sort: str = "name",
+    min_rating: int = 0,
+    starred_only: bool = False,
+) -> list[dict]:
+    """Return albums with optional sort and Navidrome filters.
+
+    sort: "name" (default) | "recently_added" | "cover_size"
+    min_rating: 0 (no filter) or 1-5 (minimum album track rating)
+    starred_only: if True, only albums with at least one starred track
+    """
+    needs_navi = min_rating > 0 or starred_only
+    join = " INNER JOIN navidrome_tracks nt ON nt.path = t.path" if needs_navi else ""
+
+    having_parts: list[str] = []
+    params: list = []
+    if min_rating > 0:
+        having_parts.append("MAX(nt.user_rating) >= ?")
+        params.append(min_rating)
+    if starred_only:
+        having_parts.append("MAX(nt.starred) = 1")
+    having = ("HAVING " + " AND ".join(having_parts)) if having_parts else ""
+
+    if sort == "recently_added":
+        order = "ORDER BY MAX(t.mtime) DESC"
+    elif sort == "cover_size":
+        order = "ORDER BY MAX(t.has_cover) ASC, COALESCE(MAX(t.cover_w) * MAX(t.cover_h), 0) ASC"
+    else:
+        order = "ORDER BY t.artist_dir COLLATE NOCASE, t.album_dir COLLATE NOCASE"
+
+    sql = f"""
+        SELECT t.artist_dir, t.album_dir,
+               MIN(t.path) AS first_flac,
+               COUNT(*) AS track_count,
+               MAX(t.has_cover) AS has_cover,
+               MAX(t.cover_w) AS cover_w,
+               MAX(t.cover_h) AS cover_h
+        FROM tracks t{join}
+        GROUP BY t.artist_dir, t.album_dir
+        {having}
+        {order}
+    """
+    rows = conn.execute(sql, params).fetchall()
+    result = []
+    for row in rows:
+        all_flacs = conn.execute(
+            "SELECT path FROM tracks WHERE artist_dir = ? AND album_dir = ? ORDER BY filename",
+            (row["artist_dir"], row["album_dir"]),
+        ).fetchall()
+        result.append({
+            "artist": row["artist_dir"],
+            "album": row["album_dir"],
+            "first_flac": row["first_flac"],
+            "all_flacs": [r["path"] for r in all_flacs],
+            "track_count": row["track_count"],
+            "has_cover": bool(row["has_cover"]),
+            "cover_w": row["cover_w"],
+            "cover_h": row["cover_h"],
         })
     return result
 
@@ -196,6 +270,59 @@ def delete_tracks_under(conn: sqlite3.Connection, path_prefix: str) -> None:
     """Remove all tracks whose path starts with path_prefix (for trashed folders/files)."""
     conn.execute("DELETE FROM tracks WHERE path = ? OR path LIKE ?",
                  (path_prefix, path_prefix.rstrip("/") + "/%"))
+    conn.commit()
+
+
+def upsert_navidrome_track(
+    conn: sqlite3.Connection,
+    path: str,
+    navi_id: str,
+    play_count: int,
+    starred: bool,
+    user_rating: int,
+) -> None:
+    conn.execute(
+        """INSERT OR REPLACE INTO navidrome_tracks
+           (path, navi_id, play_count, starred, user_rating, synced_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (path, navi_id, play_count, 1 if starred else 0, user_rating, time.time()),
+    )
+    conn.commit()
+
+
+def get_navidrome_for_album(
+    conn: sqlite3.Connection, artist_dir: str, album_dir: str
+) -> dict[str, dict]:
+    """Return a dict keyed by local path for all Navidrome-cached tracks in an album."""
+    rows = conn.execute(
+        """SELECT nt.* FROM navidrome_tracks nt
+           JOIN tracks t ON t.path = nt.path
+           WHERE t.artist_dir = ? AND t.album_dir = ?""",
+        (artist_dir, album_dir),
+    ).fetchall()
+    return {r["path"]: dict(r) for r in rows}
+
+
+def get_path_by_navi_id(conn: sqlite3.Connection, navi_id: str) -> str | None:
+    row = conn.execute(
+        "SELECT path FROM navidrome_tracks WHERE navi_id = ?", (navi_id,)
+    ).fetchone()
+    return row["path"] if row else None
+
+
+def update_navidrome_star(conn: sqlite3.Connection, path: str, starred: bool) -> None:
+    conn.execute(
+        "UPDATE navidrome_tracks SET starred = ?, synced_at = ? WHERE path = ?",
+        (1 if starred else 0, time.time(), path),
+    )
+    conn.commit()
+
+
+def update_navidrome_rating(conn: sqlite3.Connection, path: str, rating: int) -> None:
+    conn.execute(
+        "UPDATE navidrome_tracks SET user_rating = ?, synced_at = ? WHERE path = ?",
+        (rating, time.time(), path),
+    )
     conn.commit()
 
 

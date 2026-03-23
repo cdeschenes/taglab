@@ -188,6 +188,16 @@ th    { text-align: left; font-weight: 600; color: var(--text-dim); font-size: 1
 .rg-badge { background: var(--success); }
 .ly-badge { background: var(--accent); }
 
+/* ── Navidrome inline controls ─────────────────────────────────────────── */
+.navi-heart { font-size: 14px; color: var(--text-dim); padding: 2px 3px; line-height: 1; }
+.navi-heart:hover { color: var(--danger); }
+.navi-heart-on { color: var(--danger) !important; }
+
+.navi-stars { display: inline-flex; gap: 0; }
+.navi-star  { font-size: 11px; color: var(--border); padding: 1px 1px; line-height: 1; }
+.navi-star:hover { color: var(--warning); }
+.navi-star-on   { color: var(--warning) !important; }
+
 .editor-body {
   display: flex; gap: 20px; padding: 16px 20px;
   border-bottom: 1px solid var(--border);
@@ -499,6 +509,50 @@ th    { text-align: left; font-weight: 600; color: var(--text-dim); font-size: 1
 .explorer-filter-clear:hover {
   color: var(--text);
 }
+
+/* ── Explorer sort/filter bar ────────────────────────────────────────────── */
+.explorer-sort-bar {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.explorer-sort-bar select {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-input, var(--bg2));
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 11px;
+  padding: 3px 4px;
+  cursor: pointer;
+  outline: none;
+}
+
+.explorer-sort-bar select:focus { border-color: var(--accent); }
+
+/* ── Flat album list (filtered explorer mode) ────────────────────────────── */
+.album-flat-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  gap: 1px;
+  transition: background .1s;
+}
+
+.album-flat-btn:hover { background: var(--bg-3); }
+.album-flat-btn.active { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+.flat-artist { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.flat-album  { font-size: 12px; color: var(--text); }
 
 /* ── Cover Clean-up grid ─────────────────────────────────────────────────── */
 .cover-grid {

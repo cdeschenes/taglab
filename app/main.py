@@ -45,6 +45,7 @@ async def index(request: Request, username: str = Depends(require_auth)):
     return templates.TemplateResponse(request, "index.html", {
         "username": username,
         "allow_delete": settings.allow_delete,
+        "navidrome_enabled": bool(settings.navidrome_url),
         "libraries": libs,
         "active_library_idx": active_idx,
     })

@@ -17,9 +17,14 @@ async def cover_cleanup_view(
     _: str = Depends(require_auth),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=10, le=500),
+    sort: str = Query(default="name", pattern="^(name|recently_added|cover_size)$"),
+    min_rating: int = Query(default=0, ge=0, le=5),
+    starred_only: bool = Query(default=False),
 ):
     conn = library_cache.get_db(settings.media_path)
-    all_albums = library_cache.get_all_albums(conn)
+    all_albums = library_cache.get_all_albums_filtered(
+        conn, sort=sort, min_rating=min_rating, starred_only=starred_only
+    )
 
     total = len(all_albums)
     total_pages = max(1, (total + limit - 1) // limit)
@@ -36,5 +41,9 @@ async def cover_cleanup_view(
             "limit": limit,
             "total": total,
             "total_pages": total_pages,
+            "sort": sort,
+            "min_rating": min_rating,
+            "starred_only": starred_only,
+            "navidrome_enabled": bool(settings.navidrome_url),
         },
     )

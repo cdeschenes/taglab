@@ -20,12 +20,34 @@ def _media_dir(rel: str = "") -> Path:
 
 
 @router.get("/ui/explorer", response_class=HTMLResponse)
-async def get_explorer(request: Request, _: str = Depends(require_auth)):
+async def get_explorer(
+    request: Request,
+    _: str = Depends(require_auth),
+    sort: str = "name",
+    min_rating: int = 0,
+    starred_only: bool = False,
+):
     media = settings.media_path
     if not media.exists():
         raise HTTPException(status_code=500, detail=f"Media path {media} does not exist")
 
     conn = library_cache.get_db(media)
+    flat_mode = sort != "name" or min_rating > 0 or starred_only
+
+    if flat_mode:
+        albums = library_cache.get_all_albums_filtered(
+            conn, sort=sort, min_rating=min_rating, starred_only=starred_only
+        )
+        return templates.TemplateResponse(
+            request,
+            "partials/explorer.html",
+            {
+                "flat_mode": True,
+                "albums": albums,
+                "navidrome_enabled": bool(settings.navidrome_url),
+            },
+        )
+
     artists = library_cache.get_artists(conn)
 
     # Fallback to filesystem scan if cache is not yet populated.
@@ -35,7 +57,15 @@ async def get_explorer(request: Request, _: str = Depends(require_auth)):
             key=str.casefold,
         )
 
-    return templates.TemplateResponse(request, "partials/explorer.html", {"artists": artists})
+    return templates.TemplateResponse(
+        request,
+        "partials/explorer.html",
+        {
+            "flat_mode": False,
+            "artists": artists,
+            "navidrome_enabled": bool(settings.navidrome_url),
+        },
+    )
 
 
 @router.get("/ui/albums", response_class=HTMLResponse)
