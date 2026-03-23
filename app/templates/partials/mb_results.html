@@ -1,0 +1,52 @@
+<div class="mb-modal" x-data="mbModal()">
+  <div class="modal-header">
+    <h2>MusicBrainz Search</h2>
+    <button class="modal-close" @click="hideModal()">&#x2715;</button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Refine search -->
+    <form class="mb-search-form"
+          hx-get="/ui/musicbrainz/search"
+          hx-target="#mb-modal-inner"
+          hx-swap="innerHTML">
+      <input type="text" name="artist" placeholder="Artist"
+             value="{{ request.query_params.get('artist', '') }}">
+      <input type="text" name="album" placeholder="Album"
+             value="{{ request.query_params.get('album', '') }}">
+      <button class="btn btn-sm" type="submit">Search</button>
+    </form>
+
+    <div id="mb-modal-inner">
+      {% if error %}
+      <div class="error-msg">{{ error }}</div>
+      {% elif results %}
+      <table class="mb-results-table">
+        <thead>
+          <tr><th>Title</th><th>Artist</th><th>Year</th><th>Country</th><th>Media</th><th>Tracks</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+          <tr>
+            <td>{{ r.title }}</td>
+            <td>{{ r.artist }}</td>
+            <td>{{ r.date[:4] if r.date else '—' }}</td>
+            <td>{{ r.country or '—' }}</td>
+            <td>{{ r.media or '—' }}</td>
+            <td>{{ r.track_count }}</td>
+            <td>
+              <button class="btn btn-sm btn-primary"
+                      onclick="Alpine.$data(document.getElementById('album-editor')).applyMBRelease('{{ r.mbid }}')">
+                Apply
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="no-results">No results found.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,713 @@
+<div id="album-editor"
+     x-data='albumEditor({{ album | tojson }})'
+     x-init="init()">
+
+  <!-- ── Header ──────────────────────────────────────────────── -->
+  <div class="editor-header">
+    <div class="editor-title">
+      <span x-text="shared.album || '{{ album.name }}'"></span>
+      <small x-text="shared.albumartist || ''"></small>
+    </div>
+    <div class="editor-path">{{ album.path }}</div>
+    {% if album.stats %}
+    <div class="editor-stats">
+      {% set q = album.stats.quality %}
+      {% if q.tier == "hires" %}
+        <span style="color:var(--success);font-weight:600">Hi-Res</span>
+      {% elif q.tier == "mixed" %}
+        <span style="color:#e6a817;font-weight:600">Mixed</span>
+      {% else %}
+        <span style="color:var(--text-dim)">{{ "CD Quality" if q.tier == "cd" else "Standard" }}</span>
+      {% endif %}
+
+      {% if q.uniform %}
+        <span>{{ album.stats.bits }}-bit</span>
+        <span>{{ album.stats.sample_rate }}</span>
+        <span>{{ album.stats.channels }}</span>
+      {% else %}
+        {% for s in q.breakdown %}
+        <span style="color:var(--text-dim);font-size:11px">{{ s.bits }}-bit / {{ s.sample_rate }} × {{ s.count }}</span>
+        {% endfor %}
+      {% endif %}
+
+      <span>{{ album.stats.duration }}</span>
+      <span>{{ album.stats.size_mb }} MB</span>
+      <span>{{ album.stats.track_count }} track{{ 's' if album.stats.track_count != 1 }}</span>
+      <span class="rg-badge" x-show="hasRG" {% if not album.stats.has_replaygain %}style="display:none"{% endif %}>RG</span>
+      <span class="ly-badge" x-show="hasLyrics" {% if not album.stats.has_lyrics %}style="display:none"{% endif %}>LY</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="editor-body">
+
+    <!-- ── Cover art ──────────────────────────────────────────── -->
+    <div class="cover-section">
+      <div class="cover-wrap" @click="$refs.coverInput.click()">
+        {% if album.tracks[0].has_cover %}
+        <img id="cover-preview"
+             src="/api/artwork?path={{ album.tracks[0].path | urlencode }}"
+             alt="Album art">
+        {% else %}
+        <div class="cover-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <path d="m21 15-5-5L5 21"/>
+          </svg>
+          <span>Click to add art</span>
+        </div>
+        {% endif %}
+        <div class="cover-pending-badge" x-show="pendingCover" x-cloak>Pending</div>
+        <div class="cover-card-overlay">
+          <button class="btn-icon" title="Upload file" @click.stop="$refs.coverInput.click()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </button>
+          <button class="btn-icon" title="Search cover art" @click.stop="searchCovers()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </button>
+          <button class="btn-icon" title="Enter URL" @click.stop="showCoverUrl = !showCoverUrl">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <input type="file" x-ref="coverInput" accept="image/jpeg,image/png,image/webp"
+             style="display:none" @change="uploadCover($event)">
+      <div class="cover-card-url-row" x-show="showCoverUrl" @click.stop style="margin-top:6px;width:160px">
+        <input type="url" x-model="coverUrl" placeholder="https://..."
+               @keydown.enter="uploadCoverUrl()"
+               style="flex:1;font-size:11px;padding:4px 6px;">
+        <button class="btn btn-sm btn-primary" @click="uploadCoverUrl()">OK</button>
+      </div>
+      <div class="cover-dims" x-text="pendingCover ? 'Pending — save to apply' : coverDims"></div>
+    </div>
+
+    <!-- Cover search modal -->
+    <div x-show="showCoverSearch" x-cloak class="cover-search-overlay" @click.self="showCoverSearch = false">
+      <div class="cover-search-modal">
+        <div class="cover-search-header">
+          <span>Search Cover Art</span>
+          <button @click="showCoverSearch = false">&#x2715;</button>
+        </div>
+        <div x-show="coverSearchLoading" class="cover-search-loading">Searching…</div>
+        <div class="cover-search-body" x-show="!coverSearchLoading">
+          <template x-for="group in coverSearchGroups" :key="group.source">
+            <div class="csg-section">
+              <div class="csg-header" @click="group.expanded = !group.expanded">
+                <span class="csg-source-name" x-text="group.source"></span>
+                <span class="csg-count" x-text="group.covers.length + ' releases'"></span>
+                <span class="csg-chevron" :class="{ 'csg-chevron-collapsed': !group.expanded }">&#x25BE;</span>
+              </div>
+              <div class="csg-images" x-show="group.expanded && group.covers.length > 0">
+                <template x-for="(cover, i) in group.covers" :key="i">
+                  <div class="csg-image-item" @click="selectSearchCover(cover)">
+                    <img :src="cover.thumbnail" loading="lazy" alt="">
+                    <div class="csg-meta" x-text="[cover.dims, cover.format].filter(Boolean).join(' • ')"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Shared fields ─────────────────────────────────────── -->
+    <div class="shared-fields">
+      <div class="fields-grid">
+        <label>Album<input type="text" x-model="shared.album"></label>
+        <label>Album Artist<input type="text" x-model="shared.albumartist"></label>
+        <label>Date<input type="text" x-model="shared.date" placeholder="YYYY-MM-DD"></label>
+        <label>Genre<input type="text" x-model="shared.genre"></label>
+        <label>Label<input type="text" x-model="shared.label"></label>
+        <label>Country<input type="text" x-model="shared.country" placeholder="GB"></label>
+        <label>MBID Album
+          <input type="text" x-model="shared.musicbrainz_albumid" class="monospace" placeholder="MusicBrainz Release ID">
+        </label>
+        <label>MBID Album Artist
+          <input type="text" x-model="shared.musicbrainz_albumartistid" class="monospace">
+        </label>
+        <label>MBID Release Group
+          <input type="text" x-model="shared.musicbrainz_releasegroupid" class="monospace">
+        </label>
+      </div>
+    </div>
+
+  </div><!-- /.editor-body -->
+
+  <!-- ── Action bar ────────────────────────────────────────── -->
+  <div class="action-bar">
+    <div class="action-group">
+      <button class="btn btn-primary" :class="{ 'btn-dirty': isDirty }" @click="previewSave()">
+        Preview &amp; Save
+      </button>
+    </div>
+    <div class="action-group">
+      <button class="btn" @click="openMBSearch()">MusicBrainz</button>
+      <button class="btn" @click="calculateRG()">ReplayGain</button>
+      <button class="btn" @click="fetchLyricsBulk()">Fetch Lyrics</button>
+    </div>
+    <div class="action-group">
+      {% if organize_enabled %}
+      <button class="btn" @click="organizeFiles()">Organize Files</button>
+      {% endif %}
+      {% if navidrome_enabled %}
+      <button class="btn" @click="navScan()">Navidrome Scan</button>
+      {% endif %}
+    </div>
+    <div class="action-group" x-show="deleteEnabled" style="margin-left: auto">
+      <button class="btn btn-danger" @click="trashAlbum()">Move to Trash</button>
+    </div>
+  </div>
+
+  <!-- ── Track table ───────────────────────────────────────── -->
+  <div class="track-section">
+    <div class="track-section-header">
+      <span>Tracks (<span x-text="tracks.length"></span>)</span>
+    </div>
+
+    <div class="track-table-wrap">
+      <table class="track-table">
+        <thead>
+          <tr>
+            <th style="width:50px">#</th>
+            <th>Title</th>
+            <th>Artist</th>
+            <th style="width:120px">MBID Track</th>
+            <th style="width:24px" title="Lyrics">♪</th>
+            <th style="width:72px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(track, i) in tracks" :key="track.path">
+            <tr :class="{ selected: selectedTrack === i }" @click="selectTrack(i)">
+              <td>
+                <input type="number" min="1"
+                       x-model="track.tags.tracknumber"
+                       @click.stop
+                       class="num-input">
+              </td>
+              <td>
+                <input type="text"
+                       x-model="track.tags.title"
+                       @click.stop
+                       class="full-input">
+              </td>
+              <td>
+                <input type="text"
+                       x-model="track.tags.artist"
+                       @click.stop
+                       class="full-input">
+              </td>
+              <td>
+                <input type="text"
+                       x-model="track.tags.musicbrainz_trackid"
+                       @click.stop
+                       class="monospace small-input">
+              </td>
+              <td style="text-align:center;font-size:13px"
+                  :title="track.has_lrc ? 'Synced .lrc file' : track.has_lyrics_tag ? 'Embedded lyrics' : 'No lyrics'"
+                  :style="track.has_lrc ? 'color:var(--success)' : track.has_lyrics_tag ? 'color:var(--accent)' : 'color:var(--text-dim);opacity:0.4'">♪</td>
+              <td style="white-space:nowrap">
+                <button class="btn-icon" title="Preview"
+                        @click.stop="playTrack(track)">&#x25B6;</button>
+                <button class="btn-icon" title="Edit all tags"
+                        @click.stop
+                        :hx-get="'/ui/track?path=' + encodeURIComponent(track.path)"
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML">&#x270F;</button>
+                <button class="btn-icon btn-icon-danger" title="Move to Trash"
+                        x-show="deleteEnabled"
+                        @click.stop="trashTrack(track, i)">&#x1F5D1;</button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Player bar ───────────────────────────────────────── -->
+  <div class="player-bar" x-show="playerSrc" x-cloak>
+    <!-- hidden audio element; all control via JS -->
+    <audio x-ref="audio" :src="playerSrc" autoplay
+           @timeupdate="onTimeUpdate()" @loadedmetadata="onLoaded()"
+           @ended="playing=false" @play="playing=true" @pause="playing=false">
+    </audio>
+
+    <!-- track name -->
+    <span class="player-track-name" x-text="playerName"></span>
+
+    <!-- play/pause -->
+    <button class="player-btn" @click="togglePlay()" :title="playing ? 'Pause' : 'Play'">
+      <svg x-show="playing" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+      </svg>
+      <svg x-show="!playing" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <polygon points="5,3 19,12 5,21"/>
+      </svg>
+    </button>
+
+    <!-- current time -->
+    <span class="player-time" x-text="formatTime(currentTime)"></span>
+
+    <!-- seek bar -->
+    <div class="player-seek-wrap">
+      <input type="range" class="player-seek" min="0" :max="duration || 0" step="0.1"
+             :value="currentTime"
+             :style="`--pct: ${duration ? currentTime/duration*100 : 0}%`"
+             @input="seek($event.target.value)">
+    </div>
+
+    <!-- duration -->
+    <span class="player-time" x-text="formatTime(duration)"></span>
+
+    <!-- volume -->
+    <svg class="player-vol-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <path x-show="volume > 0.5" d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+      <path x-show="volume > 0" d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+    </svg>
+    <input type="range" class="player-volume" min="0" max="1" step="0.02"
+           :value="volume"
+           :style="`--pct: ${volume*100}%`"
+           @input="setVolume($event.target.value)">
+  </div>
+
+</div><!-- /#album-editor -->
+
+<script>
+function albumEditor(data) {
+  return {
+    albumPath: data.path,
+    shared: Object.assign({
+      album: '', albumartist: '', date: '', genre: '',
+      label: '', country: '',
+      musicbrainz_albumid: '', musicbrainz_albumartistid: '', musicbrainz_releasegroupid: ''
+    }, data.common_tags),
+    tracks: data.tracks.map(t => ({
+      path: t.path,
+      filename: t.filename,
+      has_cover: t.has_cover,
+      has_lrc: t.has_lrc || false,
+      has_lyrics_tag: t.has_lyrics_tag || false,
+      tags: Object.assign({ title: '', artist: '', tracknumber: '', musicbrainz_trackid: '' }, t.tags)
+    })),
+    selectedTrack: null,
+    playerSrc: '',
+    playerName: '',
+    playing: false,
+    currentTime: 0,
+    duration: 0,
+    volume: parseFloat(localStorage.getItem('taglab-player-volume') ?? '1'),
+    showCoverUrl: false,
+    coverUrl: '',
+    coverDims: '',
+    pendingCover: null,
+    showCoverSearch: false,
+    coverSearchGroups: [],
+    coverSearchLoading: false,
+    hasRG: data.stats?.has_replaygain || false,
+    hasLyrics: data.stats?.has_lyrics || false,
+    deleteEnabled: typeof isDeleteEnabled === 'function' ? isDeleteEnabled() : false,
+    _origShared: null,
+    _origTracks: null,
+
+    get isDirty() {
+      return JSON.stringify(this.shared) !== this._origShared ||
+             JSON.stringify(this.tracks.map(t => t.tags)) !== this._origTracks ||
+             !!this.pendingCover;
+    },
+
+    init() {
+      if (this.tracks.length && this.tracks[0].has_cover) this._fetchCoverDims();
+      document.addEventListener('taglab:deletepref', (e) => { this.deleteEnabled = e.detail.enabled; });
+      this._origShared = JSON.stringify(this.shared);
+      this._origTracks = JSON.stringify(this.tracks.map(t => t.tags));
+    },
+
+    async _fetchCoverDims() {
+      const resp = await fetch('/api/artwork/info?path=' + encodeURIComponent(this.tracks[0].path));
+      if (resp.ok) {
+        const d = await resp.json();
+        this.coverDims = d.width + ' × ' + d.height + ' px';
+      } else {
+        this.coverDims = '';
+      }
+    },
+
+    selectTrack(i) {
+      this.selectedTrack = this.selectedTrack === i ? null : i;
+    },
+
+    playTrack(track) {
+      this.playing = false;
+      this.currentTime = 0;
+      this.duration = 0;
+      this.playerSrc = '/api/stream?path=' + encodeURIComponent(track.path);
+      this.playerName = track.filename;
+    },
+
+    togglePlay() {
+      const a = this.$refs.audio;
+      this.playing ? a.pause() : a.play();
+    },
+
+    onLoaded() {
+      this.duration = this.$refs.audio.duration || 0;
+      this.$refs.audio.volume = this.volume;
+    },
+
+    onTimeUpdate() {
+      this.currentTime = this.$refs.audio.currentTime;
+    },
+
+    seek(val) {
+      this.$refs.audio.currentTime = parseFloat(val);
+    },
+
+    setVolume(val) {
+      this.volume = parseFloat(val);
+      this.$refs.audio.volume = this.volume;
+      localStorage.setItem('taglab-player-volume', this.volume);
+    },
+
+    formatTime(s) {
+      if (!s || isNaN(s)) return '0:00';
+      const m = Math.floor(s / 60);
+      return m + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+    },
+
+    buildPayload() {
+      return {
+        path: this.albumPath,
+        shared_tags: { ...this.shared },
+        tracks: this.tracks.map(t => ({ path: t.path, tags: { ...t.tags } })),
+        cover_pending: !!this.pendingCover,
+      };
+    },
+
+    async previewSave() {
+      const resp = await fetch('/api/album/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.buildPayload())
+      });
+      showModal(await resp.text());
+    },
+
+    async openMBSearch() {
+      const artist = this.shared.albumartist || '';
+      const album = this.shared.album || '';
+      const resp = await fetch(`/ui/musicbrainz/search?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`);
+      showModal(await resp.text());
+    },
+
+    async applyMBRelease(mbid) {
+      const resp = await fetch(`/api/musicbrainz/release/${mbid}`);
+      if (!resp.ok) { showNotification('MusicBrainz lookup failed', true); return; }
+      const data = await resp.json();
+
+      // Apply shared tags
+      Object.assign(this.shared, data.shared_tags);
+
+      // Match MB tracks to local tracks by position
+      data.tracks.forEach((mbTrack, i) => {
+        if (this.tracks[i]) {
+          Object.assign(this.tracks[i].tags, mbTrack.tags);
+        }
+      });
+      hideModal();
+      showNotification('MusicBrainz data applied — review and save');
+    },
+
+    async calculateRG() {
+      showModal(`
+        <div class="modal-header">
+          <h2>ReplayGain</h2>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:48px 20px;color:var(--text-dim)">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:rg-spin 1.2s linear infinite">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <div style="font-size:14px">Analyzing audio with ffmpeg&hellip;</div>
+          <div style="font-size:12px">This may take 20&ndash;30 seconds for large albums.</div>
+        </div>
+        <style>@keyframes rg-spin{to{transform:rotate(360deg)}}</style>
+      `);
+      const paths = this.tracks.map(t => t.path);
+      const resp = await fetch('/api/replaygain/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paths, album_mode: true })
+      });
+      if (!resp.ok) { hideModal(); showNotification('ReplayGain calculation failed', true); return; }
+      showModal(await resp.text());
+    },
+
+    async applyRG(results) {
+      const resp = await fetch('/api/replaygain/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ results })
+      });
+      hideModal();
+      if (resp.ok) this.hasRG = true;
+      showNotification(resp.ok ? 'ReplayGain tags written' : 'Failed to write ReplayGain', !resp.ok);
+    },
+
+    async fetchLyricsBulk() {
+      showModal(`
+        <div class="modal-header"><h2>Fetch Lyrics</h2></div>
+        <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:48px 20px;color:var(--text-dim)">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:rg-spin 1.2s linear infinite">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <div style="font-size:14px">Fetching lyrics for ${this.tracks.length} track(s)&hellip;</div>
+        </div>
+        <style>@keyframes rg-spin{to{transform:rotate(360deg)}}</style>
+      `);
+      const tracks = this.tracks.map(t => ({
+        path: t.path,
+        artist: t.tags.artist || '',
+        track: t.tags.title || '',
+        album: this.shared.album || '',
+      }));
+      let results;
+      try {
+        const resp = await fetch('/api/lyrics/fetch-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tracks }),
+        });
+        if (!resp.ok) { hideModal(); showNotification('Lyrics fetch failed', true); return; }
+        ({ results } = await resp.json());
+      } catch (e) {
+        hideModal(); showNotification('Lyrics fetch failed', true); return;
+      }
+
+      // Apply plain lyrics to track tags
+      const pathToIndex = {};
+      this.tracks.forEach((t, i) => { pathToIndex[t.path] = i; });
+      for (const r of results) {
+        const i = pathToIndex[r.path];
+        if (i == null) continue;
+        if (r.status === 'plain') {
+          this.tracks[i].has_lyrics_tag = true;
+        } else if (r.status === 'synced') {
+          this.tracks[i].has_lrc = true;
+        }
+      }
+      this.hasLyrics = this.tracks.every(t => t.has_lyrics_tag || t.has_lrc);
+
+      const synced   = results.filter(r => r.status === 'synced' && !r.lrc_existed).length;
+      const existed  = results.filter(r => r.status === 'synced' &&  r.lrc_existed).length;
+      const plain    = results.filter(r => r.status === 'plain').length;
+      const skipped  = results.filter(r => r.status === 'skipped').length;
+      const missing  = results.filter(r => r.status === 'not_found').length;
+      const errors   = results.filter(r => r.status === 'error').length;
+
+      const rows = results.map(r => {
+        const fname = r.path.split('/').pop();
+        let badge, note;
+        if (r.status === 'synced' && !r.lrc_existed) { badge = '<span style="color:#4ade80">synced</span>'; note = '.lrc saved'; }
+        else if (r.status === 'synced' &&  r.lrc_existed) { badge = '<span style="color:#94a3b8">synced</span>'; note = '.lrc exists'; }
+        else if (r.status === 'plain')                 { badge = '<span style="color:#60a5fa">plain</span>'; note = 'saved to tag'; }
+        else if (r.status === 'skipped' && r.reason === 'lrc_exists')     { badge = '<span style="color:#94a3b8">has lyrics</span>'; note = '.lrc file exists'; }
+        else if (r.status === 'skipped' && r.reason === 'has_lyrics_tag') { badge = '<span style="color:#94a3b8">has lyrics</span>'; note = 'lyrics tag set'; }
+        else if (r.status === 'not_found') { badge = '<span style="color:#6b7280">—</span>'; note = 'not found'; }
+        else { badge = '<span style="color:#f87171">error</span>'; note = r.message || ''; }
+        return `<tr><td style="padding:4px 8px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${fname}">${fname}</td><td style="padding:4px 8px">${badge}</td><td style="padding:4px 8px;color:var(--text-dim);font-size:12px">${note}</td></tr>`;
+      }).join('');
+
+      showModal(`
+        <div class="modal-header"><h2>Fetch Lyrics — Results</h2></div>
+        <div class="modal-body" style="padding:20px">
+          <div style="display:flex;gap:20px;margin-bottom:16px;font-size:13px">
+            <span style="color:#4ade80">${synced} synced</span>
+            ${existed  ? `<span style="color:#94a3b8">${existed} already existed</span>` : ''}
+            ${plain    ? `<span style="color:#60a5fa">${plain} plain</span>` : ''}
+            ${skipped  ? `<span style="color:#94a3b8">${skipped} already have lyrics</span>` : ''}
+            ${missing  ? `<span style="color:#6b7280">${missing} not found</span>` : ''}
+            ${errors   ? `<span style="color:#f87171">${errors} errors</span>` : ''}
+          </div>
+          <div style="max-height:340px;overflow-y:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">${rows}</table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="hideModal()">Close</button>
+        </div>
+      `);
+    },
+
+    async organizeFiles() {
+      const paths = this.tracks.map(t => t.path);
+      const resp = await fetch('/api/organizer/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paths })
+      });
+      showModal(await resp.text());
+    },
+
+    async navScan() {
+      const resp = await fetch('/api/navidrome/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full: false })
+      });
+      const data = await resp.json();
+      showNotification(resp.ok ? data.message : (data.detail || 'Scan failed'), !resp.ok);
+    },
+
+    uploadCover(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.getElementById('cover-preview');
+        if (img) img.src = e.target.result;
+        this.pendingCover = { type: 'file', file, previewUrl: e.target.result };
+        this.coverDims = '';
+      };
+      reader.readAsDataURL(file);
+    },
+
+    async removeCover() {
+      for (const t of this.tracks) {
+        await fetch(`/api/artwork?path=${encodeURIComponent(t.path)}`, { method: 'DELETE' });
+      }
+      this.pendingCover = null;
+      this.coverDims = '';
+      showNotification('Cover art removed');
+    },
+
+    async searchCovers() {
+      this.showCoverSearch = true;
+      this.coverSearchLoading = true;
+      this.coverSearchGroups = [];
+      const artist = encodeURIComponent(this.shared.albumartist || '');
+      const album = encodeURIComponent(this.shared.album || '');
+      const resp = await fetch(`/api/covers/search?artist=${artist}&album=${album}`);
+      const flat = resp.ok ? await resp.json() : [];
+      const bySource = {};
+      for (const c of flat) {
+        if (!bySource[c.source]) bySource[c.source] = [];
+        bySource[c.source].push(c);
+      }
+      const order = ['iTunes', 'Deezer', 'MusicBrainz', 'Bandcamp'];
+      this.coverSearchGroups = order.map(src => ({
+        source: src,
+        covers: bySource[src] || [],
+        expanded: !!(bySource[src] && bySource[src].length > 0),
+      }));
+      this.coverSearchLoading = false;
+    },
+
+    selectSearchCover(cover) {
+      const img = document.getElementById('cover-preview');
+      if (img) img.src = cover.thumbnail;
+      this.pendingCover = { type: 'url', url: cover.image };
+      this.showCoverSearch = false;
+      this.coverDims = '';
+    },
+
+    uploadCoverUrl() {
+      if (!this.coverUrl) return;
+      const url = this.coverUrl;
+      const img = document.getElementById('cover-preview');
+      if (img) img.src = url;
+      this.pendingCover = { type: 'url', url };
+      this.showCoverUrl = false;
+      this.coverUrl = '';
+      this.coverDims = '';
+    },
+
+    openTrackEditor(i) {
+      // HTMX handles the actual load; this is a hook for future use
+    },
+
+    async confirmSave(payload) {
+      const resp = await fetch('/api/album/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      hideModal();
+      const data = await resp.json();
+      if (resp.ok) {
+        this._origShared = JSON.stringify(this.shared);
+        this._origTracks = JSON.stringify(this.tracks.map(t => t.tags));
+
+        // Apply staged cover art if any
+        if (this.pendingCover) {
+          const paths = JSON.stringify(this.tracks.map(t => t.path));
+          const coverFilename = typeof getCoverFilename === 'function' ? getCoverFilename() : 'cover.jpg';
+          if (this.pendingCover.type === 'file') {
+            const form = new FormData();
+            form.append('paths', paths);
+            form.append('file', this.pendingCover.file);
+            form.append('cover_filename', coverFilename);
+            await fetch('/api/artwork/upload', { method: 'POST', body: form });
+          } else {
+            await fetch('/api/artwork/from-url', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: this.pendingCover.url, paths: this.tracks.map(t => t.path), cover_filename: coverFilename })
+            });
+          }
+          this.pendingCover = null;
+          this._fetchCoverDims();
+        }
+      }
+      showNotification(resp.ok ? `Saved ${data.saved.length} file(s)` : 'Save failed', !resp.ok);
+    },
+
+    trashAlbum() {
+      showConfirm(`Move entire album to trash?\n\n${this.albumPath}`, async () => {
+        const resp = await fetch('/api/trash/album', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: this.albumPath })
+        });
+        if (resp.ok) {
+          showNotification('Album moved to trash');
+          document.getElementById('editor-panel').innerHTML = '';
+          htmx.ajax('GET', '/ui/explorer', { target: '#explorer-root', swap: 'innerHTML' });
+        } else {
+          const d = await resp.json();
+          showNotification(d.detail || 'Failed to trash album', true);
+        }
+      });
+    },
+
+    trashTrack(track, i) {
+      showConfirm(`Move to trash?\n\n${track.filename}`, async () => {
+        const resp = await fetch('/api/trash/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: track.path })
+        });
+        if (resp.ok) {
+          this.tracks.splice(i, 1);
+          showNotification(`${track.filename} moved to trash`);
+        } else {
+          const d = await resp.json();
+          showNotification(d.detail || 'Failed to trash track', true);
+        }
+      });
+    }
+  };
+}
+</script>

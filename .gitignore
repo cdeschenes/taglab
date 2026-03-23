@@ -1,0 +1,41 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Local media library (mount point for dev; never commit music files)
+media/
+
+# Runtime directories — created automatically by Docker on first run
+cache/
+media2/
+organized/
+
+# Belt-and-suspenders: ignore any SQLite files that leak outside cache/
+*.db
+*.db-wal
+*.db-shm
+
+# Test / tool artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Claude Code project settings
+.claude/
+
+# Claude session resume helper
+.resume
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# macOS
+.DS_Store

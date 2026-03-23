@@ -1,0 +1,23 @@
+{% if artists %}
+  {% for artist in artists %}
+  <div class="artist-item"
+       x-data="{ open: false, loaded: false }"
+       x-show="!explorerFilter || '{{ artist }}'.toLowerCase().includes(explorerFilter.toLowerCase())">
+    <div class="artist-btn">
+      <span class="tree-arrow"
+            :class="{ rotated: open }"
+            @click.stop="open = !open; if(open && !loaded) { htmx.ajax('GET', '/ui/albums?artist={{ artist | urlencode }}', {target: '#albums-{{ loop.index }}'}); loaded = true }">&#9654;</span>
+      <span class="artist-name"
+            hx-get="/ui/artist?artist={{ artist | urlencode }}"
+            hx-target="#editor-panel"
+            hx-swap="innerHTML"
+            @click="open = true; if(!loaded) { htmx.ajax('GET', '/ui/albums?artist={{ artist | urlencode }}', {target: '#albums-{{ loop.index }}'}); loaded = true }">
+        {{ artist }}
+      </span>
+    </div>
+    <div id="albums-{{ loop.index }}" class="album-list" x-show="open"></div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state small">No artist folders found in /media</div>
+{% endif %}

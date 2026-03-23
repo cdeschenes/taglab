@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TagLab</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/modals.js"></script>
+  <script src="/static/track_editor.js"></script>
+  <script src="/static/cover_cleanup.js"></script>
+  <script src="/static/artist_page.js"></script>
+  <script src="/static/alpine.min.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18V5l12-2v13"/>
+        <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+      TagLab
+    </div>
+
+    <!-- Library scan progress (inline in header, hidden when idle) -->
+    <div id="scan-progress" style="display:none;flex:1;align-items:center;gap:10px;padding:0 24px;min-width:0;">
+      <div style="flex:1;height:3px;background:var(--bg,#181825);border-radius:2px;overflow:hidden;min-width:0;">
+        <div id="scan-progress-bar" style="height:100%;background:var(--accent,#5b7fff);width:0%;transition:width .3s;"></div>
+      </div>
+      <span id="scan-progress-text" style="font-size:11px;color:var(--text-dim,#aaa);white-space:nowrap;">Scanning library…</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="header-user">
+        {{ username }} &nbsp;·&nbsp; <a href="/logout" style="color:var(--text-dim);font-size:12px">sign out</a>
+      </div>
+      <div class="settings-picker" id="settings-picker">
+        <button class="settings-picker-btn" onclick="toggleSettings()" title="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+        <div class="settings-dropdown hidden" id="settings-dropdown">
+
+          <div class="settings-section-label">Theme</div>
+          <div class="settings-themes">
+            <button class="theme-option" data-theme="default" onclick="setTheme('default')">
+              <span class="theme-swatch" style="background:#5b7fff"></span> Default
+            </button>
+            <button class="theme-option" data-theme="nord" onclick="setTheme('nord')">
+              <span class="theme-swatch" style="background:#88C0D0"></span> Nord
+            </button>
+            <button class="theme-option" data-theme="dracula" onclick="setTheme('dracula')">
+              <span class="theme-swatch" style="background:#BD93F9"></span> Dracula
+            </button>
+            <button class="theme-option" data-theme="github-dark" onclick="setTheme('github-dark')">
+              <span class="theme-swatch" style="background:#58A6FF"></span> GitHub Dark
+            </button>
+            <button class="theme-option" data-theme="tokyo-night" onclick="setTheme('tokyo-night')">
+              <span class="theme-swatch" style="background:#7AA2F7"></span> Tokyo Night
+            </button>
+            <button class="theme-option" data-theme="catppuccin" onclick="setTheme('catppuccin')">
+              <span class="theme-swatch" style="background:#89B4FA"></span> Catppuccin
+            </button>
+          </div>
+
+          <div class="settings-divider"></div>
+          <div class="settings-section-label">Cover Art</div>
+
+          <div class="settings-row">
+            <label class="settings-row-label">Preferred filename</label>
+            <select class="settings-select" id="cover-filename-select" onchange="saveCoverFilename(this.value)">
+              <option value="cover.jpg">cover.jpg</option>
+              <option value="folder.jpg">folder.jpg</option>
+            </select>
+          </div>
+
+          <div class="settings-row" style="margin-top:8px;">
+            <label class="settings-row-label">Covers per page</label>
+            <select class="settings-select" id="covers-limit-select" onchange="saveCoverLimit(this.value)">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+
+          <div class="settings-divider"></div>
+          <div class="settings-section-label">Library</div>
+
+          <div class="settings-row">
+            <label class="settings-row-label">Thumbnail size</label>
+            <select class="settings-select" id="thumbnail-size-select" onchange="saveThumbnailSize(this.value)">
+              <option value="160">Small (160px)</option>
+              <option value="200">Medium (200px)</option>
+              <option value="260">Large (260px)</option>
+            </select>
+          </div>
+
+          <div class="settings-row" style="margin-top:8px;">
+            <label class="settings-row-label">Library index</label>
+            <button class="btn btn-sm" id="rescan-btn" onclick="triggerRescan()">Rescan</button>
+          </div>
+
+          {% if allow_delete %}
+          <div class="settings-divider"></div>
+          <div class="settings-section-label">Danger Zone</div>
+          <div class="settings-row">
+            <label class="settings-row-label" for="delete-toggle">Allow delete</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="delete-toggle" onchange="saveDeleteEnabled(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row" style="margin-top:8px;">
+            <label class="settings-row-label">Trash folder</label>
+            <button class="btn btn-sm btn-danger" onclick="emptyTrash()">Empty Trash</button>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <button class="sidebar-nav-btn"
+              hx-get="/ui/cover-cleanup"
+              hx-vals='js:{limit: getCoverLimit()}'
+              hx-target="#editor-panel"
+              hx-swap="innerHTML">
+        Cover Clean-up
+      </button>
+      {% if libraries | length > 1 %}
+      <div class="library-picker" id="library-picker">
+        <button class="library-picker-btn" onclick="toggleLibraryPicker()" title="Switch library">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0">
+            <path d="M2 6h20M2 12h20M2 18h20"/>
+          </svg>
+          <span>Library &nbsp;·&nbsp; <span id="library-active-name">{{ libraries[active_library_idx].label }}</span></span>
+          <svg class="library-picker-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="library-picker-dropdown hidden" id="library-picker-dropdown">
+          {% for lib in libraries %}
+          <button class="library-picker-item{% if loop.index0 == active_library_idx %} active{% endif %}"
+                  onclick="switchLibrary({{ loop.index0 }})">
+            <svg class="lib-check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            {{ lib.label }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="sidebar-header">Library</div>
+      {% endif %}
+      <div x-data="{ explorerFilter: '' }">
+        <div class="explorer-filter">
+          <input type="text"
+                 x-model="explorerFilter"
+                 placeholder="Filter artists…"
+                 class="explorer-filter-input" />
+          <button x-show="explorerFilter"
+                  @click="explorerFilter = ''"
+                  class="explorer-filter-clear"
+                  aria-label="Clear filter">&#x2715;</button>
+        </div>
+        <div id="explorer-root"
+             hx-get="/ui/explorer"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="editor-panel" id="editor-panel">
+      {% block editor %}
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 18V5l12-2v13"/>
+          <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+        <p>Select an album from the library to begin editing</p>
+      </div>
+      {% endblock %}
+    </main>
+  </div>
+
+  <!-- Global modal overlay -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal(event)">
+    <div id="modal-container" class="modal-container"></div>
+  </div>
+
+  <!-- Global notification -->
+  <div id="notification" class="notification hidden"></div>
+
+  <script>
+    window.TAGLAB_CAN_DELETE = {{ allow_delete | tojson }};
+  </script>
+  <script>
+    // ── Theme system ──────────────────────────────────────────────────────────
+    function applyTheme(name) {
+      if (name === 'default') document.body.removeAttribute('data-theme');
+      else document.body.setAttribute('data-theme', name);
+      localStorage.setItem('taglab-theme', name);
+      document.querySelectorAll('.theme-option').forEach(el => {
+        el.classList.toggle('active', el.dataset.theme === name);
+      });
+    }
+    function setTheme(name) {
+      applyTheme(name);
+      closeSettings();
+    }
+
+    // ── Settings panel ────────────────────────────────────────────────────────
+    function toggleSettings() {
+      document.getElementById('settings-dropdown').classList.toggle('hidden');
+    }
+    function closeSettings() {
+      document.getElementById('settings-dropdown').classList.add('hidden');
+    }
+    document.addEventListener('click', e => {
+      if (!document.getElementById('settings-picker').contains(e.target)) closeSettings();
+    });
+
+    // ── Library picker ────────────────────────────────────────────────────────
+    function toggleLibraryPicker() {
+      document.getElementById('library-picker-dropdown').classList.toggle('hidden');
+    }
+    function closeLibraryPicker() {
+      const d = document.getElementById('library-picker-dropdown');
+      if (d) d.classList.add('hidden');
+    }
+    document.addEventListener('click', e => {
+      const picker = document.getElementById('library-picker');
+      if (picker && !picker.contains(e.target)) closeLibraryPicker();
+    });
+    async function switchLibrary(idx) {
+      closeLibraryPicker();
+      const resp = await fetch('/api/libraries/switch?idx=' + idx, { method: 'POST' });
+      if (!resp.ok) { showNotification('Failed to switch library', true); return; }
+      const data = await resp.json();
+      const nameEl = document.getElementById('library-active-name');
+      if (nameEl) nameEl.textContent = data.label;
+      // Update active state in dropdown
+      document.querySelectorAll('.library-picker-item').forEach((btn, i) => {
+        btn.classList.toggle('active', i === idx);
+      });
+      // Reload explorer immediately (shows cached state), then again after scan completes
+      htmx.ajax('GET', '/ui/explorer', { target: '#explorer-root', swap: 'innerHTML' });
+      _refreshExplorerOnScanComplete = true;
+      clearTimeout(_scanPollTimer);
+      pollScanStatus();
+      document.getElementById('editor-panel').innerHTML =
+        '<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><p>Select an album from the library to begin editing</p></div>';
+      showNotification('Switched to ' + data.label);
+    }
+
+    // Cover filename preference
+    function getCoverFilename() {
+      return localStorage.getItem('taglab-cover-filename') || 'cover.jpg';
+    }
+    function saveCoverFilename(value) {
+      localStorage.setItem('taglab-cover-filename', value);
+    }
+
+    // Covers per page preference
+    function getCoverLimit() {
+      return parseInt(localStorage.getItem('taglab-covers-limit') || '20', 10);
+    }
+    function saveCoverLimit(value) {
+      localStorage.setItem('taglab-covers-limit', value);
+      // Reload cover cleanup immediately if it's currently open
+      const panel = document.getElementById('cover-cleanup');
+      if (panel) {
+        htmx.ajax('GET', '/ui/cover-cleanup?limit=' + value, { target: '#editor-panel', swap: 'innerHTML' });
+      }
+    }
+
+    // Thumbnail size preference
+    function getThumbnailSize() {
+      return parseInt(localStorage.getItem('taglab-thumb-size') || '160', 10);
+    }
+    function applyThumbnailSize(size) {
+      document.documentElement.style.setProperty('--cover-tile-size', size + 'px');
+      document.dispatchEvent(new CustomEvent('taglab:thumbsize', { detail: { size } }));
+    }
+    function saveThumbnailSize(value) {
+      const size = parseInt(value, 10);
+      localStorage.setItem('taglab-thumb-size', size);
+      applyThumbnailSize(size);
+    }
+
+    // ── Library scan progress ─────────────────────────────────────────────────
+    let _scanPollTimer = null;
+    let _refreshExplorerOnScanComplete = false;
+    function pollScanStatus() {
+      fetch('/api/library/scan/status')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (!d) return;
+          const container = document.getElementById('scan-progress');
+          const bar = document.getElementById('scan-progress-bar');
+          const text = document.getElementById('scan-progress-text');
+          if (d.status === 'scanning') {
+            container.style.display = 'flex';
+            const pct = d.total > 0 ? Math.round(d.done / d.total * 100) : 0;
+            bar.style.width = pct + '%';
+            text.textContent = 'Scanning library\u2026 ' + d.done + ' / ' + d.total + ' tracks';
+            _scanPollTimer = setTimeout(pollScanStatus, 500);
+          } else {
+            container.style.display = 'none';
+            const btn = document.getElementById('rescan-btn');
+            if (btn) { btn.disabled = false; btn.textContent = 'Rescan'; }
+            if (_refreshExplorerOnScanComplete) {
+              _refreshExplorerOnScanComplete = false;
+              htmx.ajax('GET', '/ui/explorer', { target: '#explorer-root', swap: 'innerHTML' });
+            }
+          }
+        })
+        .catch(() => { _scanPollTimer = setTimeout(pollScanStatus, 2000); });
+    }
+    function triggerRescan() {
+      const btn = document.getElementById('rescan-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+      fetch('/api/library/scan', { method: 'POST' })
+        .then(() => { clearTimeout(_scanPollTimer); pollScanStatus(); })
+        .catch(() => { if (btn) { btn.disabled = false; btn.textContent = 'Rescan'; } });
+      closeSettings();
+    }
+    // Start polling on load to catch the startup background scan.
+    pollScanStatus();
+
+    // ── Delete preference ─────────────────────────────────────────────────────
+    function isDeleteEnabled() {
+      return window.TAGLAB_CAN_DELETE && localStorage.getItem('taglab-delete-enabled') === 'true';
+    }
+    function saveDeleteEnabled(val) {
+      localStorage.setItem('taglab-delete-enabled', val ? 'true' : 'false');
+      document.dispatchEvent(new CustomEvent('taglab:deletepref', { detail: { enabled: val } }));
+    }
+    function emptyTrash() {
+      showConfirm('Permanently delete everything in .trash?\n\nThis cannot be undone.', async () => {
+        closeSettings();
+        const resp = await fetch('/api/trash/empty', { method: 'POST' });
+        const d = await resp.json();
+        showNotification(resp.ok ? `Trash emptied (${d.removed} item${d.removed !== 1 ? 's' : ''} removed)` : (d.detail || 'Failed to empty trash'), !resp.ok);
+      });
+    }
+
+    // Apply stored settings on load
+    applyTheme(localStorage.getItem('taglab-theme') || 'default');
+    applyThumbnailSize(getThumbnailSize());
+    document.getElementById('cover-filename-select').value = getCoverFilename();
+    document.getElementById('thumbnail-size-select').value = String(getThumbnailSize());
+    document.getElementById('covers-limit-select').value = String(getCoverLimit());
+    const _delToggle = document.getElementById('delete-toggle');
+    if (_delToggle) _delToggle.checked = isDeleteEnabled();
+
+    // ── Modal / notifications ─────────────────────────────────────────────────
+    function closeModal(event) {
+      if (event.target.id === 'modal-overlay') {
+        document.getElementById('modal-overlay').classList.add('hidden');
+      }
+    }
+    function showModal(html) {
+      const container = document.getElementById('modal-container');
+      container.innerHTML = html;
+      document.getElementById('modal-overlay').classList.remove('hidden');
+      if (window.Alpine) window.Alpine.initTree(container);
+    }
+    function hideModal() {
+      document.getElementById('modal-overlay').classList.add('hidden');
+    }
+    function showConfirm(message, onConfirm) {
+      showModal(`
+        <div class="confirm-modal">
+          <div class="modal-header"><h2>Confirm</h2></div>
+          <div class="modal-body">
+            <p class="confirm-message">${message.replace(/\n/g, '<br>')}</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" onclick="hideModal()">Cancel</button>
+            <button class="btn btn-danger" id="confirm-ok-btn">Confirm</button>
+          </div>
+        </div>
+      `);
+      document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+        hideModal();
+        onConfirm();
+      });
+    }
+    function showNotification(message, isError = false) {
+      const el = document.getElementById('notification');
+      el.textContent = message;
+      el.className = 'notification ' + (isError ? 'error' : 'success');
+      setTimeout(() => { el.className = 'notification hidden'; }, 4000);
+    }
+
+    // ── Explorer selection highlight ──────────────────────────────────────────
+    document.body.addEventListener('htmx:beforeRequest', (e) => {
+      if (e.detail.target && e.detail.target.id === 'editor-panel') {
+        document.querySelectorAll('#explorer-root .artist-btn.active, #explorer-root .album-btn.active')
+          .forEach(el => el.classList.remove('active'));
+        const elt = e.detail.elt;
+        if (elt) {
+          if (elt.classList.contains('artist-name')) {
+            elt.closest('.artist-btn')?.classList.add('active');
+          } else if (elt.classList.contains('album-btn')) {
+            elt.classList.add('active');
+          }
+        }
+      }
+    });
+
+    // HTMX response handler for modal targets
+    document.body.addEventListener('htmx:afterSwap', (e) => {
+      if (e.detail.target.id === 'modal-container') {
+        document.getElementById('modal-overlay').classList.remove('hidden');
+        // Re-initialize Alpine on the new content in case MutationObserver fired
+        // before HTMX executed inline scripts. With trackEditor in a static file
+        // this is a safety net for any residual timing edge cases.
+        if (window.Alpine) window.Alpine.initTree(e.detail.target);
+      }
+      // Scroll editor panel to top on cover cleanup page navigation.
+      if (e.detail.target.id === 'cover-cleanup') {
+        const panel = document.getElementById('editor-panel');
+        if (panel) panel.scrollTop = 0;
+      }
+    });
+  </script>
+</body>
+</html>

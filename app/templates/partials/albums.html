@@ -1,0 +1,9 @@
+{% for album in albums %}
+<button class="album-btn"
+        hx-get="/ui/album?path={{ (artist + '/' + album) | urlencode }}"
+        hx-target="#editor-panel"
+        hx-swap="innerHTML"
+        hx-indicator="#editor-panel">
+  {{ album }}
+</button>
+{% endfor %}

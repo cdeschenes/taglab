@@ -1,0 +1,135 @@
+<div class="organize-modal" x-data='organizeModal({{ previews | tojson }}, {{ paths | tojson }}, {{ current_pattern | tojson }}, {{ current_target | tojson }})'>
+  <div class="modal-header">
+    <h2>Organize Files — Preview</h2>
+    <button class="modal-close" @click="hideModal()">&#x2715;</button>
+  </div>
+
+  <div class="modal-body">
+    <div class="org-settings">
+      <label>
+        Target directory
+        <input type="text" class="org-target-input" x-model="target" placeholder="/path/to/organized">
+      </label>
+      <div class="org-settings-field">
+        <span>Pattern</span>
+        <div class="org-pattern-toolbar">
+          <button type="button" class="btn-icon" title="Save pattern" @click="savePattern()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+          </button>
+          <div class="org-load-wrap">
+            <button type="button" class="btn-icon" title="Load saved pattern" @click="showLoadMenu = !showLoadMenu">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
+            <div class="org-load-menu" x-show="showLoadMenu" @click.outside="showLoadMenu = false" x-cloak>
+              <template x-if="savedPatterns.length === 0">
+                <div class="org-load-empty">No saved patterns</div>
+              </template>
+              <template x-for="p in savedPatterns" :key="p.name">
+                <div class="org-load-item">
+                  <span class="org-load-name" @click="loadPattern(p.pattern)" x-text="p.name"></span>
+                  <button type="button" class="org-load-del" @click.stop="deletePattern(p.name)">&#x00D7;</button>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+        <div class="org-builder">
+          <input class="org-sep-input"
+                 :style="{width: Math.max(1,(separators[0]||'').length)+'ch'}"
+                 :value="separators[0]"
+                 @input="separators[0]=$event.target.value; onPatternChange()">
+          <template x-for="(tok, idx) in tokens" :key="tok.id">
+            <span class="org-seg">
+              <span class="org-chip"
+                    draggable="true"
+                    @dragstart="dragStart(idx)"
+                    @dragover.prevent="dragOver(idx)"
+                    @dragleave="dragLeave(idx)"
+                    @drop.prevent="drop(idx)"
+                    @dragend="dragEnd()"
+                    :class="{'is-dragging': _dragSrcIdx===idx, 'is-dragover': _dragoverIdx===idx}">
+                <span x-text="tokenLabel(tok.value)"></span>
+                <button class="org-chip-x" type="button" @click.stop="removeToken(idx)">&#x00D7;</button>
+              </span>
+              <input class="org-sep-input"
+                     :style="{width: Math.max(1,(separators[idx+1]||'').length)+'ch'}"
+                     :value="separators[idx+1]||''"
+                     @input="separators[idx+1]=$event.target.value; onPatternChange()">
+            </span>
+          </template>
+        </div>
+        <div class="org-palette">
+          <button type="button" class="org-token" title="Album artist tag" @click="addToken('{album_artist}')">album_artist</button>
+          <button type="button" class="org-token" title="First artist from album artist field (splits on /, |, ;, &amp;, comma)" @click="addToken('{album_artist_first}')">album_artist_first</button>
+          <button type="button" class="org-token" title="Album title tag" @click="addToken('{album}')">album</button>
+          <button type="button" class="org-token" title="Track title tag" @click="addToken('{title}')">title</button>
+          <button type="button" class="org-token" title="Track number (zero-padded)" @click="addToken('{track:02d}')">track</button>
+          <button type="button" class="org-token" title="Disc number" @click="addToken('{disc}')">disc</button>
+          <button type="button" class="org-token" title="Release year" @click="addToken('{year}')">year</button>
+          <button type="button" class="org-token" title="Genre tag" @click="addToken('{genre}')">genre</button>
+          <button type="button" class="org-token" title="Track artist tag" @click="addToken('{artist}')">artist</button>
+          <button type="button" class="org-token" title="Artist sort name (e.g. Young, Neil)" @click="addToken('{artistsort}')">artistsort</button>
+          <button type="button" class="org-token" title="Album artist sort name" @click="addToken('{albumartistsort}')">albumartistsort</button>
+          <button type="button" class="org-token" title="Record label" @click="addToken('{label}')">label</button>
+          <button type="button" class="org-token" title="Composer name" @click="addToken('{composer}')">composer</button>
+          <button type="button" class="org-token" title="Musical key" @click="addToken('{key}')">key</button>
+          <button type="button" class="org-token" title="Full release date (e.g. 2001-09-10)" @click="addToken('{date}')">date</button>
+          <button type="button" class="org-token" title="Original release year (4-digit)" @click="addToken('{originalyear}')">originalyear</button>
+          <button type="button" class="btn btn-sm" @click="rePreview()">Re-preview</button>
+        </div>
+      </div>
+    </div>
+
+    {% set errors = previews | selectattr('error') | list %}
+    {% if errors %}
+    <div class="warning-box">
+      {{ errors | length }} file(s) cannot be moved due to missing tags:
+      <ul>{% for e in errors %}<li>{{ e.filename }}: {{ e.error }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    {% set conflicts = previews | selectattr('conflict') | list %}
+    {% if conflicts %}
+    <div class="warning-box conflict-box">
+      &#x26A0; {{ conflicts | length }} file{{ 's' if conflicts | length != 1 }} already exist at the destination and will be skipped.
+    </div>
+    {% endif %}
+
+    <table class="organize-table">
+      <thead>
+        <tr><th>Source</th><th></th><th>Destination</th></tr>
+      </thead>
+      <tbody>
+        {% for p in previews %}
+        <tr class="{{ 'has-error' if p.error else 'has-conflict' if p.conflict else '' }}">
+          <td class="org-source">{{ p.filename }}</td>
+          <td>{% if p.error %}&#x26A0;{% elif p.conflict %}&#x26A0;{% else %}&#x2192;{% endif %}</td>
+          <td class="org-target">
+            {% if p.error %}
+              <em>{{ p.error }}</em>
+            {% elif p.conflict %}
+              <span class="target-path">{{ p.target }}</span>
+              <span class="conflict-badge">already exists — will skip</span>
+            {% else %}
+              {{ p.target }}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn" @click="hideModal()">Cancel</button>
+    <button class="btn btn-primary" @click="apply()" :disabled="applying">
+      <span x-text="applying ? 'Moving files...' : 'Move Files'"></span>
+    </button>
+  </div>
+</div>

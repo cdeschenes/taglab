@@ -1,0 +1,44 @@
+<div class="rg-modal" x-data='rgModal({{ results | tojson }})'>
+  <div class="modal-header">
+    <h2>ReplayGain Preview</h2>
+    <button class="modal-close" @click="hideModal()">&#x2715;</button>
+  </div>
+
+  <div class="modal-body">
+    <p class="rg-info">
+      Calculated using EBU R128 (ReplayGain 2.0).
+      Reference level: −18 LUFS.
+      {% if album_mode %}Album and track gain calculated from all {{ results | length }} tracks.{% endif %}
+    </p>
+
+    <table class="rg-table">
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Loudness (LUFS)</th>
+          <th>Track Gain</th>
+          {% if album_mode %}<th>Album Gain</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td>{{ r.filename }}</td>
+          <td>{{ "%.2f" | format(r.lufs) }} LUFS</td>
+          <td>{{ r.tags.REPLAYGAIN_TRACK_GAIN }}</td>
+          {% if album_mode %}
+          <td>{{ r.tags.get('REPLAYGAIN_ALBUM_GAIN', '—') }}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn" @click="hideModal()">Cancel</button>
+    <button class="btn btn-primary" @click="apply()" :disabled="applying">
+      <span x-text="applying ? 'Writing tags...' : 'Write ReplayGain Tags'"></span>
+    </button>
+  </div>
+</div>

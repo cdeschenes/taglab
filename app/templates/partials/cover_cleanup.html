@@ -1,0 +1,151 @@
+<div id="cover-cleanup"
+     x-data='coverCleanup({{ albums | tojson }})'
+     x-init="init()"
+     style="padding: 20px;">
+
+  <div style="margin-bottom: 16px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+    <h2 style="font-size: 18px; font-weight: 700; margin: 0;">Cover Clean-up</h2>
+    <p style="font-size: 13px; color: var(--text-dim); margin: 0;">Click, drag, or paste a URL to replace artwork</p>
+  </div>
+
+  {% if not albums and total == 0 %}
+  <div class="empty-state">
+    <p>No albums indexed yet. The library scan may still be in progress.</p>
+  </div>
+  {% elif not albums %}
+  <div class="empty-state">
+    <p>No albums found in your library.</p>
+  </div>
+  {% else %}
+  <div class="cover-grid">
+    <template x-for="(card, i) in cards" :key="i">
+      <div class="cover-card">
+        <!-- Cover image + drop/click zone -->
+        <div class="cover-card-img-wrap"
+             :class="{ 'drag-over': dragging[i] }"
+             @click="pickFile(i)"
+             @dragover.prevent="onDragOver(i)"
+             @dragleave="onDragLeave(i)"
+             @drop.prevent="dropFile(i, $event)">
+
+          <img :id="'cover-img-' + i"
+               :src="card.imgSrc"
+               :alt="card.album"
+               style="width:100%;height:100%;object-fit:cover;"
+               @error="onImgError($event)">
+
+          <!-- Hover overlay -->
+          <div class="cover-card-overlay">
+            <button class="btn-icon" title="Upload file" @click.stop="pickFile(i)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </button>
+            <button class="btn-icon" title="Search cover art" @click.stop="searchCovers(i)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </button>
+            <button class="btn-icon" title="Enter URL" @click.stop="toggleUrl(i)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Uploading overlay -->
+          <div x-show="card.uploading"
+               style="position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;">
+            Uploading…
+          </div>
+        </div>
+
+        <!-- Hidden file input -->
+        <input type="file" accept="image/jpeg,image/png,image/webp"
+               :id="'file-input-' + i"
+               style="display:none"
+               @change="uploadFile(i, $event)">
+
+        <!-- Label -->
+        <div class="cover-card-label">
+          <div style="font-weight:600;font-size:12px;" x-text="card.album"></div>
+          <div style="color:var(--text-dim);font-size:11px;" x-text="card.artist"></div>
+          <div class="cover-dims" x-text="card.dims"></div>
+        </div>
+
+        <!-- URL row -->
+        <div class="cover-card-url-row" x-show="card.showUrl" @click.stop>
+          <input type="url"
+                 x-model="card.urlInput"
+                 placeholder="https://..."
+                 @keydown.enter="uploadUrl(i)"
+                 style="flex:1;font-size:11px;padding:4px 6px;">
+          <button class="btn btn-sm btn-primary" @click="uploadUrl(i)">OK</button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  {% if total_pages > 1 %}
+  <div style="display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap;">
+    {% if page > 1 %}
+    <button class="btn btn-sm"
+            hx-get="/ui/cover-cleanup?page={{ page - 1 }}&limit={{ limit }}"
+            hx-target="#cover-cleanup"
+            hx-swap="outerHTML">← Prev</button>
+    {% else %}
+    <button class="btn btn-sm" disabled>← Prev</button>
+    {% endif %}
+
+    <span style="font-size:13px;color:var(--text-dim);">
+      {{ (page - 1) * limit + 1 }}–{{ [page * limit, total] | min }} of {{ total }} albums
+      &nbsp;·&nbsp; page {{ page }} / {{ total_pages }}
+    </span>
+
+    {% if page < total_pages %}
+    <button class="btn btn-sm"
+            hx-get="/ui/cover-cleanup?page={{ page + 1 }}&limit={{ limit }}"
+            hx-target="#cover-cleanup"
+            hx-swap="outerHTML">Next →</button>
+    {% else %}
+    <button class="btn btn-sm" disabled>Next →</button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% endif %}
+
+  <!-- Cover search modal -->
+  <div x-show="showCoverSearch" x-cloak class="cover-search-overlay" @click.self="showCoverSearch = false; activeSearchIdx = null">
+    <div class="cover-search-modal">
+      <div class="cover-search-header">
+        <span>Search Cover Art</span>
+        <button @click="showCoverSearch = false; activeSearchIdx = null">&#x2715;</button>
+      </div>
+      <div x-show="coverSearchLoading" class="cover-search-loading">Searching…</div>
+      <div class="cover-search-body" x-show="!coverSearchLoading">
+        <template x-for="group in coverSearchGroups" :key="group.source">
+          <div class="csg-section">
+            <div class="csg-header" @click="group.expanded = !group.expanded">
+              <span class="csg-source-name" x-text="group.source"></span>
+              <span class="csg-count" x-text="group.covers.length + ' releases'"></span>
+              <span class="csg-chevron" :class="{ 'csg-chevron-collapsed': !group.expanded }">&#x25BE;</span>
+            </div>
+            <div class="csg-images" x-show="group.expanded && group.covers.length > 0">
+              <template x-for="(cover, ci) in group.covers" :key="ci">
+                <div class="csg-image-item" @click="selectSearchCover(cover)">
+                  <img :src="cover.thumbnail" loading="lazy" alt="">
+                  <div class="csg-meta" x-text="[cover.dims, cover.format].filter(Boolean).join(' • ')"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,48 @@
+<div class="preview-modal" x-data='previewModal({{ payload | tojson }})'>
+  <div class="modal-header">
+    <h2>Preview Changes</h2>
+    <button class="modal-close" @click="hideModal()">&#x2715;</button>
+  </div>
+
+  <div class="modal-body">
+    {% if cover_pending %}
+    <div class="preview-cover-notice">
+      Cover art will be updated.
+    </div>
+    {% endif %}
+    {% set changed_count = namespace(value=0) %}
+    {% for file in previews %}
+      {% if file.changes %}
+        {% set changed_count.value = changed_count.value + 1 %}
+        <div class="preview-file">
+          <div class="preview-filename">{{ file.filename }}</div>
+          <table class="diff-table">
+            {% for change in file.changes %}
+            <tr>
+              <td class="diff-field">{{ change.field }}</td>
+              <td class="diff-old">{{ change.old or '<empty>' }}</td>
+              <td class="diff-arrow">&#x2192;</td>
+              <td class="diff-new">{{ change.new or '<empty>' }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    {% if changed_count.value == 0 %}
+    <div class="no-changes">No changes detected.</div>
+    {% endif %}
+
+    <div class="preview-summary">
+      {{ changed_count.value }} of {{ previews | length }} file(s) will be modified.
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn" @click="hideModal()">Cancel</button>
+    <button class="btn btn-primary" @click="apply()" :disabled="applying">
+      <span x-text="applying ? 'Saving...' : 'Apply Changes'"></span>
+    </button>
+  </div>
+</div>

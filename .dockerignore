@@ -1,0 +1,14 @@
+.git
+.env
+.claude
+media
+media2
+cache
+tests
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist
+build

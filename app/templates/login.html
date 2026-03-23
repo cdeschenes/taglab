@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TagLab — Sign in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --bg-2:      #1a1d27;
+      --bg-3:      #22263a;
+      --border:    #2e3350;
+      --text:      #d4d8f0;
+      --text-dim:  #7880a8;
+      --accent:    #5b7fff;
+      --accent-h:  #7b9fff;
+      --danger:    #e05a6b;
+      --success:   #3cba7f;
+      --warning:   #e8a838;
+      --radius:    6px;
+    }
+    [data-theme="nord"] {
+      --bg:#2E3440; --bg-2:#3B4252; --bg-3:#434C5E; --border:#4C566A;
+      --text:#ECEFF4; --text-dim:#D8DEE9; --accent:#88C0D0; --accent-h:#8FBCBB;
+      --danger:#BF616A; --success:#A3BE8C; --warning:#EBCB8B;
+    }
+    [data-theme="dracula"] {
+      --bg:#282A36; --bg-2:#1E1F29; --bg-3:#44475A; --border:#6272A4;
+      --text:#F8F8F2; --text-dim:#6272A4; --accent:#BD93F9; --accent-h:#CDA8FC;
+      --danger:#FF5555; --success:#50FA7B; --warning:#FFB86C;
+    }
+    [data-theme="github-dark"] {
+      --bg:#0D1117; --bg-2:#161B22; --bg-3:#21262D; --border:#30363D;
+      --text:#C9D1D9; --text-dim:#8B949E; --accent:#58A6FF; --accent-h:#79B8FF;
+      --danger:#F85149; --success:#3FB950; --warning:#D29922;
+    }
+    [data-theme="tokyo-night"] {
+      --bg:#1A1B26; --bg-2:#16161E; --bg-3:#24283B; --border:#292E42;
+      --text:#C0CAF5; --text-dim:#565F89; --accent:#7AA2F7; --accent-h:#89B4FA;
+      --danger:#F7768E; --success:#9ECE6A; --warning:#E0AF68;
+    }
+    [data-theme="catppuccin"] {
+      --bg:#1E1E2E; --bg-2:#181825; --bg-3:#313244; --border:#45475A;
+      --text:#CDD6F4; --text-dim:#6C7086; --accent:#89B4FA; --accent-h:#B4BEFE;
+      --danger:#F38BA8; --success:#A6E3A1; --warning:#FAB387;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: radial-gradient(ellipse at 60% 20%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 60%),
+                        radial-gradient(ellipse at 20% 80%, color-mix(in srgb, var(--accent) 4%, transparent) 0%, transparent 50%);
+    }
+
+    .login-card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.5);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .login-logo-icon {
+      width: 56px;
+      height: 56px;
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+    }
+    .login-logo-name {
+      font-family: 'DM Mono', monospace;
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: -.5px;
+      color: var(--text);
+    }
+    .login-tagline {
+      font-size: 13px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .login-form { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .field label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-dim);
+    }
+    .field input {
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .field input:focus { border-color: var(--accent); }
+
+    .btn-login {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      width: 100%;
+      margin-top: 4px;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-login:hover { background: var(--accent-h); border-color: var(--accent-h); }
+
+    .error-banner {
+      background: color-mix(in srgb, var(--danger) 12%, transparent);
+      border: 1px solid var(--danger);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--danger);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18V5l12-2v13"/>
+          <circle cx="6" cy="18" r="3"/>
+          <circle cx="18" cy="16" r="3"/>
+        </svg>
+      </div>
+      <span class="login-logo-name">TagLab</span>
+      <p class="login-tagline">Your music. Perfectly tagged.</p>
+    </div>
+
+    {% if error %}
+    <div class="error-banner" style="margin-bottom:14px">Invalid username or password.</div>
+    {% endif %}
+
+    <form class="login-form" method="post" action="/login">
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" autofocus required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn-login">Sign in</button>
+    </form>
+  </div>
+
+  <script>
+    // Apply saved theme so login page matches the rest of the app
+    (function () {
+      var name = localStorage.getItem('taglab-theme') || 'default';
+      if (name !== 'default') document.body.setAttribute('data-theme', name);
+    })();
+  </script>
+</body>
+</html>

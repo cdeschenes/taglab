@@ -1,0 +1,68 @@
+<div class="track-editor-modal" x-data='trackEditor({{ track | tojson }})'>
+  <div class="modal-header">
+    {% if track.has_cover %}
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0">
+      <img class="track-editor-cover"
+           src="/api/artwork/thumbnail?size=72&path={{ track.path | urlencode }}"
+           alt="Cover art">
+      <span id="track-cover-dims" class="cover-dims"></span>
+    </div>
+    {% endif %}
+    <div style="flex:1;min-width:0">
+      <h2 style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ track.filename }}</h2>
+      <div class="track-info-line">
+        {{ "%.1f"|format(track.info.length // 60) | int }}:{{ "%02d" | format(track.info.length | int % 60) }}
+        &nbsp;·&nbsp; {{ track.info.sample_rate // 1000 }} kHz
+        &nbsp;·&nbsp; {{ track.info.bits_per_sample }}-bit
+        &nbsp;·&nbsp; {{ track.info.channels }}ch
+      </div>
+    </div>
+    <button class="modal-close" @click="hideModal()">&#x2715;</button>
+  </div>
+
+  <div class="modal-body two-col">
+    <div>
+      <h3>Standard Fields</h3>
+      <template x-for="key in standardKeys.filter(k => k !== 'lyrics' && k !== 'comment')" :key="key">
+        <label :for="'tf-' + key">
+          <span x-text="key"></span>
+          <input :id="'tf-' + key" type="text" x-model="tags[key]"
+                 :class="key.startsWith('musicbrainz') || key.startsWith('replaygain') ? 'monospace' : ''">
+        </label>
+      </template>
+      <label for="tf-comment"><span>comment</span>
+        <textarea id="tf-comment" x-model="tags['comment']" rows="4" style="resize:vertical"></textarea>
+      </label>
+      <label for="tf-lyrics"><span>lyrics</span>
+        <textarea id="tf-lyrics" x-model="tags['lyrics']" rows="4" style="resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <button class="btn btn-sm" @click.prevent="fetchLyrics()">Fetch Lyrics</button>
+          <span x-show="lyricsStatus" x-text="lyricsStatus"
+                :style="lyricsStatusOk ? 'color:var(--success)' : 'color:var(--text-dim)'"
+                style="font-size:11px"></span>
+        </div>
+      </label>
+    </div>
+    <div>
+      <h3>Custom Fields</h3>
+      <template x-for="(val, key) in customTags" :key="key">
+        <div class="custom-tag-row">
+          <input type="text" :value="key" readonly class="tag-key-input">
+          <input type="text" x-model="customTags[key]" class="tag-val-input">
+          <button class="btn-icon danger" @click="deleteCustomTag(key)">&#x2715;</button>
+        </div>
+      </template>
+      <div class="add-custom-tag">
+        <input type="text" x-model="newKey" placeholder="Field name" class="tag-key-input">
+        <input type="text" x-model="newVal" placeholder="Value" class="tag-val-input">
+        <button class="btn btn-sm" @click="addCustomTag()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn" @click="hideModal()">Cancel</button>
+    <button class="btn btn-primary" @click="save()">Save Track</button>
+  </div>
+</div>
+

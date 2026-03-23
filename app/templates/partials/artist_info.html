@@ -1,0 +1,117 @@
+{% if info %}
+<div class="artist-info-card"
+     x-data='artistImageCard({{ info.name | tojson }}, {{ info.image_url | tojson }}, {{ folder | tojson }})'>
+
+  <!-- Image + hover overlay -->
+  <div class="artist-info-img-wrap">
+    <!-- Placeholder (shown when no image or load failed) -->
+    <div class="artist-info-img artist-info-img-placeholder" x-show="imgFailed || !imgSrc">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+           stroke="var(--text-dim)" stroke-width="1.5">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+    </div>
+    <!-- Actual image -->
+    <img class="artist-info-img"
+         x-show="imgSrc && !imgFailed"
+         :src="imgSrc"
+         alt="{{ info.name }}"
+         loading="lazy"
+         @error="onImgError()">
+    <!-- Hover overlay: search icon always available -->
+    <div class="artist-info-img-overlay">
+      <button class="btn-icon" title="Search artist photo" @click.stop="searchArtistPhoto()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Saving overlay -->
+    <div x-show="saving"
+         style="position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;
+                align-items:center;justify-content:center;font-size:11px;color:#fff;
+                border-radius:var(--radius)">
+      Saving&hellip;
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="artist-info-body">
+
+    <!-- Stats -->
+    {% if info.listeners or info.playcount %}
+    <div class="artist-info-stats">
+      {% if info.listeners %}
+      <span><strong>{{ "{:,}".format(info.listeners | int) }}</strong> listeners</span>
+      {% endif %}
+      {% if info.playcount %}
+      <span><strong>{{ "{:,}".format(info.playcount | int) }}</strong> scrobbles</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Tags / Genres -->
+    {% if info.tags %}
+    <div class="artist-info-tags">
+      {% for tag in info.tags %}
+      <span class="artist-info-tag">{{ tag }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Bio -->
+    {% if info.bio %}
+    <p class="artist-info-bio">{{ info.bio }}</p>
+    {% endif %}
+
+    <!-- Similar artists -->
+    {% if info.similar %}
+    <div class="artist-info-similar">
+      <span style="color:var(--text-dim);font-size:11px">Similar:&nbsp;</span>
+      {% for s in info.similar %}
+      <span class="artist-info-similar-name"
+            hx-get="/ui/artist?artist={{ s.name | urlencode }}"
+            hx-target="#editor-panel"
+            hx-swap="innerHTML">{{ s.name }}</span>{% if not loop.last %}<span style="color:var(--text-dim)">,&nbsp;</span>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if info.url %}
+    <a class="artist-info-link" href="{{ info.url }}" target="_blank" rel="noopener">
+      View on Last.fm ↗
+    </a>
+    {% endif %}
+
+  </div>
+
+  <!-- Artist photo search modal -->
+  <div x-show="showPhotoSearch" x-cloak class="cover-search-overlay"
+       @click.self="showPhotoSearch = false">
+    <div class="cover-search-modal">
+      <div class="cover-search-header">
+        <span>Search Artist Photo &mdash; {{ info.name }}</span>
+        <button @click="showPhotoSearch = false">&#x2715;</button>
+      </div>
+      <div x-show="photoSearchLoading" class="cover-search-loading">Searching&hellip;</div>
+      <div class="cover-search-body" x-show="!photoSearchLoading">
+        <div x-show="photoSearchResults.length === 0" class="cover-search-loading">
+          No results found
+        </div>
+        <div class="csg-images" x-show="photoSearchResults.length > 0">
+          <template x-for="(photo, pi) in photoSearchResults" :key="pi">
+            <div class="csg-image-item" @click="selectArtistPhoto(photo)">
+              <img :src="photo.thumbnail" loading="lazy" alt=""
+                   style="aspect-ratio:1;object-fit:cover">
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endif %}
