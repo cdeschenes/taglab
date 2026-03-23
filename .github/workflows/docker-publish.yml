@@ -33,10 +33,8 @@ jobs:
             echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          provenance: false
-          tags: ghcr.io/cdeschenes/taglab:${{ steps.tag.outputs.tag }}
+      - name: Build
+        run: docker build -t ghcr.io/cdeschenes/taglab:${{ steps.tag.outputs.tag }} .
+
+      - name: Push
+        run: docker push ghcr.io/cdeschenes/taglab:${{ steps.tag.outputs.tag }}
