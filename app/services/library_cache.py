@@ -24,6 +24,25 @@ def _db_path(media_path: Path) -> Path:
     return settings.cache_path / f"library_{h}.db"
 
 
+def drop_db(media_path: Path) -> None:
+    """Close and delete the SQLite cache for media_path so the next get_db() starts fresh."""
+    key = str(media_path)
+    db_file = _db_path(media_path)
+    with _connections_lock:
+        conn = _connections.pop(key, None)
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+    for suffix in ("", "-wal", "-shm"):
+        p = Path(str(db_file) + suffix)
+        try:
+            p.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
 def get_db(media_path: Path) -> sqlite3.Connection:
     key = str(media_path)
     with _connections_lock:

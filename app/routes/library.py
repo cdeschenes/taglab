@@ -20,6 +20,17 @@ async def trigger_scan(_: str = Depends(require_auth)):
     return {"ok": True}
 
 
+@router.post("/api/library/scan/reset")
+async def reset_and_scan(_: str = Depends(require_auth)):
+    """Drop the existing SQLite cache and run a full fresh scan."""
+    if library_cache.scan_state()["status"] == "scanning":
+        return {"ok": False, "detail": "Scan already in progress"}
+    library_cache.drop_db(settings.media_path)
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, library_cache.run_scan, settings.media_path)
+    return {"ok": True}
+
+
 @router.get("/api/library/scan/status")
 async def scan_status(_: str = Depends(require_auth)):
     """Return current scan state as JSON for polling."""

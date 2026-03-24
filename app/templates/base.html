@@ -108,7 +108,10 @@
 
           <div class="settings-row" style="margin-top:8px;">
             <label class="settings-row-label">Library index</label>
-            <button class="btn btn-sm" id="rescan-btn" onclick="triggerRescan()">Rescan</button>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-sm" id="rescan-btn" onclick="triggerRescan()">Rescan</button>
+              <button class="btn btn-sm btn-danger" onclick="triggerResetRescan()" title="Delete the cache database and rebuild from scratch">Reset &amp; Rescan</button>
+            </div>
           </div>
 
           {% if navidrome_enabled %}
@@ -393,6 +396,19 @@
         .then(() => { clearTimeout(_scanPollTimer); pollScanStatus(); })
         .catch(() => { if (btn) { btn.disabled = false; btn.textContent = 'Rescan'; } });
       closeSettings();
+    }
+    function triggerResetRescan() {
+      showConfirm(
+        'Delete the library cache and rebuild from scratch?\n\nThis clears all cached track data and re-reads every FLAC file. It may take a while on large libraries.',
+        () => {
+          const btn = document.getElementById('rescan-btn');
+          if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+          fetch('/api/library/scan/reset', { method: 'POST' })
+            .then(() => { clearTimeout(_scanPollTimer); pollScanStatus(); })
+            .catch(() => { if (btn) { btn.disabled = false; btn.textContent = 'Rescan'; } });
+          closeSettings();
+        }
+      );
     }
     let _naviSyncPollTimer = null;
     function pollNaviSyncStatus() {
