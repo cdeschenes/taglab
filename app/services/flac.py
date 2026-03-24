@@ -101,12 +101,20 @@ def write_tags(path: Path, tags: dict[str, str]) -> None:
 
 
 def write_cover(path: Path, image_data: bytes, mime_type: str) -> None:
+    import io
+    from PIL import Image as _Image
     audio = FLAC(str(path))
     audio.clear_pictures()
     pic = Picture()
     pic.type = 3
     pic.mime = mime_type
     pic.data = image_data
+    try:
+        img = _Image.open(io.BytesIO(image_data))
+        pic.width = img.width
+        pic.height = img.height
+    except Exception:
+        pass
     audio.add_picture(pic)
     audio.save()
 

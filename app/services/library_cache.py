@@ -269,6 +269,21 @@ def get_stats(conn: sqlite3.Connection) -> dict:
     return {"artists": row["artists"], "albums": row["albums"], "tracks": row["tracks"]}
 
 
+def update_cover_dimensions(
+    conn: sqlite3.Connection,
+    path: str,
+    has_cover: bool,
+    cover_w: int | None,
+    cover_h: int | None,
+) -> None:
+    """Update cover art dimensions in the cache without a full track re-read."""
+    conn.execute(
+        "UPDATE tracks SET has_cover=?, cover_w=?, cover_h=? WHERE path=?",
+        (1 if has_cover else 0, cover_w, cover_h, path),
+    )
+    conn.commit()
+
+
 def invalidate_path(conn: sqlite3.Connection, path: str) -> None:
     conn.execute("DELETE FROM tracks WHERE path = ?", (path,))
     conn.commit()
@@ -378,7 +393,7 @@ def run_scan(media_path: Path) -> None:
             mtime = f.stat().st_mtime
             cached = get_cached_track(conn, str(f), mtime)
             needs_update = cached is None or (
-                cached.get("has_cover") and cached.get("cover_w") is None
+                cached.get("has_cover") and not cached.get("cover_w")
             )
             if needs_update:
                 audio = FLAC(str(f))

@@ -14,6 +14,7 @@ from PIL import Image
 from app.auth import require_auth
 from app.config import settings
 from app.services import flac as flac_svc
+from app.services import library_cache
 
 router = APIRouter()
 
@@ -132,11 +133,16 @@ async def upload_artwork(
     except (ValueError, TypeError):
         path_list = [paths]
 
+    img = Image.open(io.BytesIO(image_data))
+    cover_w, cover_h = img.width, img.height
+
     updated: list[str] = []
     album_dirs: set[Path] = set()
+    conn = library_cache.get_db(settings.media_path)
     for p in path_list:
         f = _flac_file(p)
         flac_svc.write_cover(f, image_data, file.content_type)
+        library_cache.update_cover_dimensions(conn, str(f), True, cover_w, cover_h)
         updated.append(f.name)
         album_dirs.add(f.parent)
 
@@ -175,11 +181,16 @@ async def upload_artwork_from_url(
     if len(image_data) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Image too large (max 10 MB)")
 
+    img = Image.open(io.BytesIO(image_data))
+    cover_w, cover_h = img.width, img.height
+
     updated: list[str] = []
     album_dirs: set[Path] = set()
+    conn = library_cache.get_db(settings.media_path)
     for p in payload.paths:
         f = _flac_file(p)
         flac_svc.write_cover(f, image_data, content_type)
+        library_cache.update_cover_dimensions(conn, str(f), True, cover_w, cover_h)
         updated.append(f.name)
         album_dirs.add(f.parent)
 
@@ -193,6 +204,8 @@ async def upload_artwork_from_url(
 async def delete_artwork(path: str, _: str = Depends(require_auth)):
     f = _flac_file(path)
     flac_svc.remove_cover(f)
+    conn = library_cache.get_db(settings.media_path)
+    library_cache.update_cover_dimensions(conn, str(f), False, None, None)
     return {"ok": True}
 
 
