@@ -863,3 +863,51 @@ th    { text-align: left; font-weight: 600; color: var(--text-dim); font-size: 1
 .artist-info-similar-name:hover { color: var(--accent); }
 .artist-info-link { font-size: 11px; color: var(--text-dim); text-decoration: none; align-self: flex-start; }
 .artist-info-link:hover { color: var(--accent); }
+
+/* Trash page */
+.trash-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.trash-artist-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+}
+.trash-artist-name {
+  font-size: 14px; font-weight: 600; flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.trash-album-row {
+  padding: 8px 14px 8px 28px;
+  border-bottom: 1px solid var(--border);
+}
+.trash-album-row:last-child { border-bottom: none; }
+.trash-album-name {
+  font-size: 13px; font-weight: 500;
+}
+.trash-track-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 5px 0 5px 14px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.trash-track-name {
+  font-size: 12px; color: var(--text-dim); flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.trash-meta {
+  font-size: 11px; color: var(--text-dim); white-space: nowrap;
+}
+.restore-btn {
+  flex-shrink: 0;
+  padding: 4px 10px; font-size: 12px;
+  border-radius: 5px; border: 1px solid var(--border);
+  background: var(--bg-3); color: var(--text);
+  cursor: pointer; white-space: nowrap;
+}
+.restore-btn:hover { background: var(--bg-4); color: var(--accent); }
+.restore-btn-sm { padding: 2px 8px; font-size: 11px; }

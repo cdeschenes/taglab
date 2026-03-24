@@ -148,6 +148,14 @@
               hx-swap="innerHTML">
         Cover Clean-up
       </button>
+      {% if allow_delete %}
+      <button class="sidebar-nav-btn"
+              hx-get="/ui/trash"
+              hx-target="#editor-panel"
+              hx-swap="innerHTML">
+        Trash
+      </button>
+      {% endif %}
       {% if libraries | length > 1 %}
       <div class="library-picker" id="library-picker">
         <button class="library-picker-btn" onclick="toggleLibraryPicker()" title="Switch library">

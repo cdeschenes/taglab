@@ -27,13 +27,7 @@
 - Frontend: new toggle + article-list input in the organizer modal.
 
 ## Trash Page — Recovery & Management *(medium-hard — filesystem scan + restore logic + new UI)*
-- Move-to-trash for artist, album, and track is already implemented. What's missing is a recovery UI.
-- Add a "Trash" entry in the sidebar below "Cover Clean-Up".
-- The page lists all trashed items grouped hierarchically (Artist → Album → Tracks), with file size and date trashed.
-- Each item has a **Recover** button to restore it to its original location; album-level and artist-level buttons restore all contained items in one click.
-- Retain the existing **Empty Trash** button to permanently purge all trashed files.
-- Backend: scan `.trash/` on page load, reconstruct original paths from the directory structure, implement a `restore` endpoint that moves files back and re-indexes them in the library cache.
-- Tricky edge cases: destination path no longer exists, name conflicts, partial restores.
+- **Implemented.** Trash sidebar button (gated on `allow_delete`), hierarchical Artist→Album→Track view with Recover / Restore Album / Restore Artist buttons. Files restored back to original location and re-indexed in the library cache immediately. Empty Trash button on the page mirrors the settings panel action.
 
 ## Update Notifications & In-Place Updates *(medium-hard — registry API + optional Docker socket)*
 - On startup (or via a periodic background check), compare the running image digest to the latest digest on `ghcr.io` via the GitHub Container Registry API. Surface a subtle banner or badge in the UI when an update is available.

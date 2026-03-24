@@ -1,0 +1,81 @@
+<div id="trash-page" style="padding: 20px;">
+
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+    <h2 style="font-size:18px;font-weight:700;margin:0;">Trash</h2>
+    {% if total_tracks > 0 %}
+    <span style="font-size:13px;color:var(--text-dim);">{{ total_tracks }} track{{ 's' if total_tracks != 1 }}</span>
+    {% endif %}
+    {% if items %}
+    <button class="danger-btn"
+            style="margin-left:auto;"
+            hx-post="/api/trash/empty"
+            hx-confirm="Permanently delete everything in trash? This cannot be undone."
+            hx-target="#trash-page"
+            hx-swap="outerHTML"
+            hx-on::after-request="if(event.detail.successful) htmx.ajax('GET','/ui/trash',{target:'#trash-page',swap:'outerHTML'})">
+      Empty Trash
+    </button>
+    {% endif %}
+  </div>
+
+  {% if not items %}
+  <div style="text-align:center;padding:60px 20px;color:var(--text-dim);">
+    <div style="font-size:48px;margin-bottom:16px;">🗑️</div>
+    <p style="font-size:15px;margin:0;">Trash is empty</p>
+  </div>
+  {% else %}
+
+  {% for artist in items %}
+  <div class="trash-section">
+
+    <div class="trash-artist-row">
+      <span class="trash-artist-name">{{ artist.artist }}</span>
+      <button class="restore-btn"
+              hx-post="/api/trash/restore/artist"
+              hx-vals='{"artist": {{ artist.artist | tojson }}}'
+              hx-target="#trash-page"
+              hx-swap="outerHTML"
+              hx-on::after-request="if(event.detail.successful) htmx.ajax('GET','/ui/trash',{target:'#trash-page',swap:'outerHTML'})">
+        Restore Artist
+      </button>
+    </div>
+
+    {% for album in artist.albums %}
+    <div class="trash-album-row">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="trash-album-name">{{ album.album }}</span>
+        <span class="trash-meta">{{ album.track_count }} track{{ 's' if album.track_count != 1 }} &middot; {{ (album.total_size / 1048576) | round(1) }} MB</span>
+        <button class="restore-btn"
+                style="margin-left:auto;"
+                hx-post="/api/trash/restore/album"
+                hx-vals='{"artist": {{ artist.artist | tojson }}, "album": {{ album.album | tojson }}}'
+                hx-target="#trash-page"
+                hx-swap="outerHTML"
+                hx-on::after-request="if(event.detail.successful) htmx.ajax('GET','/ui/trash',{target:'#trash-page',swap:'outerHTML'})">
+          Restore Album
+        </button>
+      </div>
+
+      {% for track in album.tracks %}
+      <div class="trash-track-row">
+        <span class="trash-track-name">{{ track.filename }}</span>
+        <span class="trash-meta">{{ (track.size / 1048576) | round(1) }} MB &middot; {{ track.trashed_at }}</span>
+        <button class="restore-btn restore-btn-sm"
+                hx-post="/api/trash/restore/track"
+                hx-vals='{"path": {{ track.path | tojson }}}'
+                hx-target="closest .trash-track-row"
+                hx-swap="delete"
+                hx-on::after-request="if(!event.detail.successful) alert('Restore failed: ' + event.detail.xhr.responseText)">
+          Recover
+        </button>
+      </div>
+      {% endfor %}
+
+    </div>
+    {% endfor %}
+
+  </div>
+  {% endfor %}
+
+  {% endif %}
+</div>
