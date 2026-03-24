@@ -64,10 +64,16 @@ def _init_schema(conn: sqlite3.Connection) -> None:
             play_count  INTEGER NOT NULL DEFAULT 0,
             starred     INTEGER NOT NULL DEFAULT 0,
             user_rating INTEGER NOT NULL DEFAULT 0,
-            synced_at   REAL NOT NULL
+            synced_at   REAL NOT NULL,
+            navi_created REAL
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_navi_id ON navidrome_tracks(navi_id)")
+    # Migrate existing databases that predate the navi_created column.
+    try:
+        conn.execute("ALTER TABLE navidrome_tracks ADD COLUMN navi_created REAL")
+    except Exception:
+        pass  # Column already exists
     conn.commit()
 
 
@@ -145,6 +151,8 @@ def get_all_albums_filtered(
     """
     needs_navi = min_rating > 0 or starred_only
     join = " INNER JOIN navidrome_tracks nt ON nt.path = t.path" if needs_navi else ""
+    # Always LEFT JOIN for navi_created so recently-added sort uses Navidrome's stable add date.
+    navi_created_join = " LEFT JOIN navidrome_tracks nt2 ON nt2.path = t.path" if sort == "recently_added" else ""
 
     having_parts: list[str] = []
     params: list = []
@@ -156,7 +164,7 @@ def get_all_albums_filtered(
     having = ("HAVING " + " AND ".join(having_parts)) if having_parts else ""
 
     if sort == "recently_added":
-        order = "ORDER BY MAX(t.mtime) DESC"
+        order = "ORDER BY COALESCE(MAX(nt2.navi_created), MAX(t.mtime)) DESC"
     elif sort == "cover_size":
         order = "ORDER BY MAX(t.has_cover) ASC, COALESCE(MAX(t.cover_w) * MAX(t.cover_h), 0) ASC"
     else:
@@ -169,7 +177,7 @@ def get_all_albums_filtered(
                MAX(t.has_cover) AS has_cover,
                MAX(t.cover_w) AS cover_w,
                MAX(t.cover_h) AS cover_h
-        FROM tracks t{join}
+        FROM tracks t{join}{navi_created_join}
         GROUP BY t.artist_dir, t.album_dir
         {having}
         {order}
@@ -280,12 +288,20 @@ def upsert_navidrome_track(
     play_count: int,
     starred: bool,
     user_rating: int,
+    navi_created: float | None = None,
 ) -> None:
     conn.execute(
-        """INSERT OR REPLACE INTO navidrome_tracks
-           (path, navi_id, play_count, starred, user_rating, synced_at)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (path, navi_id, play_count, 1 if starred else 0, user_rating, time.time()),
+        """INSERT INTO navidrome_tracks
+           (path, navi_id, play_count, starred, user_rating, synced_at, navi_created)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(path) DO UPDATE SET
+             navi_id=excluded.navi_id,
+             play_count=excluded.play_count,
+             starred=excluded.starred,
+             user_rating=excluded.user_rating,
+             synced_at=excluded.synced_at,
+             navi_created=COALESCE(excluded.navi_created, navidrome_tracks.navi_created)""",
+        (path, navi_id, play_count, 1 if starred else 0, user_rating, time.time(), navi_created),
     )
     conn.commit()
 

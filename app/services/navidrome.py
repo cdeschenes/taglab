@@ -1,6 +1,7 @@
 """Navidrome API integration via the Subsonic API."""
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 import sqlite3
@@ -125,10 +126,20 @@ async def search_album(albumartist: str, album: str) -> str | None:
     return None
 
 
+def _parse_navi_created(raw: str | None) -> float | None:
+    """Parse a Navidrome ISO 8601 created timestamp to a Unix float, or None."""
+    if not raw:
+        return None
+    try:
+        return datetime.datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return None
+
+
 async def get_album_tracks(album_id: str) -> list[dict]:
     """
     Fetch all tracks for a Navidrome album.
-    Returns list of {id, track, disc_number, play_count, starred, user_rating}.
+    Returns list of {id, track, disc_number, play_count, starred, user_rating, navi_created}.
     """
     params = {**_subsonic_params(), "id": album_id}
     try:
@@ -151,6 +162,7 @@ async def get_album_tracks(album_id: str) -> list[dict]:
             "play_count": s.get("playCount", 0),
             "starred": "starred" in s and bool(s["starred"]),
             "user_rating": s.get("userRating", 0),
+            "navi_created": _parse_navi_created(s.get("created")),
         })
     return result
 
@@ -247,6 +259,7 @@ async def run_navi_sync(conn: sqlite3.Connection) -> None:
                         nt["play_count"],
                         nt["starred"],
                         nt["user_rating"],
+                        nt.get("navi_created"),
                     )
         except Exception as exc:
             log.warning("Navidrome sync failed for %s / %s: %s", album["artist"], album["album"], exc)
