@@ -25,6 +25,8 @@ STANDARD_TAGS: list[str] = [
     "bpm",
     "key",
     "lyrics",
+    "mood",
+    "performer",
     "musicbrainz_albumid",
     "musicbrainz_albumartistid",
     "musicbrainz_artistid",

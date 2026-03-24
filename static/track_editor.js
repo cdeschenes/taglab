@@ -6,7 +6,7 @@
 function trackEditor(data) {
   const STANDARD = [
     'title','artist','albumartist','album','date','tracknumber','discnumber',
-    'genre','composer','label','country','isrc','barcode','comment','bpm','key','lyrics',
+    'genre','composer','label','country','isrc','barcode','comment','bpm','key','lyrics','mood','performer',
     'musicbrainz_albumid','musicbrainz_albumartistid','musicbrainz_artistid',
     'musicbrainz_trackid','musicbrainz_releasegroupid','musicbrainz_releasetrackid',
     'replaygain_track_gain','replaygain_track_peak',
