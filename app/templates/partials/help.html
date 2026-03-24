@@ -1,0 +1,267 @@
+<div id="help-page" style="padding: 20px; max-width: 960px;">
+
+  <!-- Header -->
+  <div style="margin-bottom: 24px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+    <h2 style="font-size: 18px; font-weight: 700; margin: 0;">Help</h2>
+    <p style="font-size: 13px; color: var(--text-dim); margin: 0;">Quick reference for TagLab features</p>
+  </div>
+
+  <!-- Feature cards grid -->
+  <div class="help-grid">
+
+    <!-- Library Explorer -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <h3>Library Explorer</h3>
+      </div>
+      <ul class="help-list">
+        <li>Browse your library by artist and album in the left sidebar</li>
+        <li>Type in the filter box to narrow results by artist or album name</li>
+        <li>Sort A–Z or by Recently Added using the sort bar above the explorer</li>
+        <li>Click an album to open the tag editor in the main panel</li>
+        {% if navidrome_enabled %}
+        <li>Filter by Navidrome favorites (♥) or minimum star rating using the Navidrome dropdowns</li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <!-- Tag Editing -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </div>
+        <h3>Tag Editing</h3>
+      </div>
+      <ul class="help-list">
+        <li>Edit shared album fields (Album Artist, Year, Genre, Label, Country) at the top of the album editor</li>
+        <li>Click <strong>Apply to All</strong> to bulk-copy a shared field value to every track</li>
+        <li>Click any track row to open the per-track editor with the full tag set</li>
+        <li>Fields like Composer, BPM, Mood, Performer, and Disc Number are supported in the track editor</li>
+        <li>Custom / non-standard tags appear in the Custom Fields column and can be added or removed freely</li>
+        <li>Click <strong>Save</strong> to write changes to disk — changes are not auto-saved</li>
+      </ul>
+    </div>
+
+    <!-- Cover Art -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+        <h3>Cover Art</h3>
+      </div>
+      <ul class="help-list">
+        <li>Click the cover thumbnail on the album editor to open the artwork panel</li>
+        <li>Upload a file by clicking, dragging an image onto the panel, or pasting a URL</li>
+        <li>Use <strong>Search Covers</strong> to find artwork from iTunes, Deezer, MusicBrainz, and Bandcamp</li>
+        <li>Cover art is embedded in every FLAC file and also saved as <code>cover.jpg</code> in the album folder</li>
+        <li>Use <strong>Cover Clean-up</strong> in the sidebar to find albums with missing or small artwork</li>
+        <li>Sort Cover Clean-up by Name, Recently Added, or Size (small → large) to prioritize your work</li>
+      </ul>
+    </div>
+
+    <!-- MusicBrainz -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </div>
+        <h3>MusicBrainz</h3>
+      </div>
+      <ul class="help-list">
+        <li>Click <strong>MusicBrainz Lookup</strong> on the album editor to search for release metadata</li>
+        <li>Results include release date, label, country, track listing, and MusicBrainz IDs</li>
+        <li>Select the best matching release and click <strong>Apply</strong> to fill shared and per-track fields</li>
+        <li>MusicBrainz IDs are written as tags and help other tools (like Beets or Picard) identify releases</li>
+        <li>Searches use Album + Album Artist from the current editor values — fill those in first for best results</li>
+      </ul>
+    </div>
+
+    <!-- ReplayGain -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+        </div>
+        <h3>ReplayGain</h3>
+      </div>
+      <ul class="help-list">
+        <li>Click <strong>ReplayGain</strong> on the album editor to calculate loudness normalization values</li>
+        <li>Uses ffmpeg's EBU R128 algorithm — produces album gain and per-track gain values</li>
+        <li>A preview shows the calculated gain before you choose to write it</li>
+        <li>Results are written as standard ReplayGain tags in each FLAC file</li>
+        <li>Requires ffmpeg to be installed (included in the Docker image automatically)</li>
+      </ul>
+    </div>
+
+    <!-- Lyrics -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </div>
+        <h3>Lyrics</h3>
+      </div>
+      <ul class="help-list">
+        <li>Click the <strong>lyrics icon</strong> (♪) on any track row to open the lyrics panel</li>
+        <li>Click <strong>Fetch Lyrics</strong> to search LRCLib for synchronized (timestamped) lyrics</li>
+        <li>Synced lyrics are saved as a <code>.lrc</code> sidecar file next to the FLAC</li>
+        <li>Plain lyrics are written into the <code>LYRICS</code> FLAC tag via the track editor</li>
+        <li>Track rows show a ♪ icon when lyrics are available (tag or .lrc file)</li>
+      </ul>
+    </div>
+
+    <!-- File Organizer -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <h3>File Organizer</h3>
+      </div>
+      <ul class="help-list">
+        <li>Click <strong>Organize</strong> on the album editor to preview a rename/move based on tags</li>
+        <li>The pattern uses tokens like <code>{album_artist}</code>, <code>{album}</code>, <code>{track:02d}</code>, <code>{title}</code></li>
+        <li>A preview shows the exact source → destination paths before any files move</li>
+        <li>Confirm to move files; the library index updates immediately — no rescan needed</li>
+        <li>Set <code>ORGANIZE_TARGET</code> in your <code>.env</code> to enable this feature</li>
+        <li>Save frequently-used patterns for quick recall</li>
+      </ul>
+    </div>
+
+    {% if allow_delete %}
+    <!-- Trash & Recovery -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </div>
+        <h3>Trash &amp; Recovery</h3>
+      </div>
+      <ul class="help-list">
+        <li>Click the trash icon on any track row or <strong>Move to Trash</strong> on the album editor to soft-delete</li>
+        <li>Files move to <code>.trash/</code> inside your media root — nothing is permanently deleted</li>
+        <li>Open <strong>Trash</strong> in the sidebar to browse trashed items grouped by artist and album</li>
+        <li>Click <strong>Recover</strong>, <strong>Restore Album</strong>, or <strong>Restore Artist</strong> to move files back</li>
+        <li>Click <strong>Empty Trash</strong> to permanently purge all trashed files</li>
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if navidrome_enabled %}
+    <!-- Navidrome -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </div>
+        <h3>Navidrome</h3>
+      </div>
+      <ul class="help-list">
+        <li>Click <strong>Sync Navidrome</strong> on the album editor to pull play counts, ♥ favorites, and ★ ratings</li>
+        <li>Heart (♥) and star rating columns appear on each track row in the album editor</li>
+        <li>Changes to ♥ and ★ are written back to Navidrome in real time via the Subsonic API</li>
+        <li>Use the ♥ and ★ filters in the explorer sort bar to browse your library by Navidrome data</li>
+        <li>Click <strong>Trigger Navidrome Scan</strong> to ask Navidrome to re-index your library after tagging</li>
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Themes & Settings -->
+    <div class="help-card">
+      <div class="help-card-header">
+        <div class="help-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/>
+            <line x1="8" y1="12" x2="20" y2="12"/>
+            <line x1="4" y1="18" x2="16" y2="18"/>
+            <circle cx="4" cy="12" r="2" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <h3>Themes &amp; Settings</h3>
+      </div>
+      <ul class="help-list">
+        <li>Click the <strong>⚙</strong> gear icon in the top-right to open Settings</li>
+        <li>Choose from six dark themes: Default, Nord, Dracula, GitHub Dark, Tokyo Night, Catppuccin</li>
+        <li>Adjust thumbnail size and covers-per-page for the Cover Clean-up view</li>
+        <li>Set your preferred cover filename (<code>cover.jpg</code> or <code>folder.jpg</code>)</li>
+        <li>Switch between multiple configured libraries using the library picker in the sidebar</li>
+        <li>The <strong>Library Scan</strong> button re-indexes your entire music folder when needed</li>
+      </ul>
+    </div>
+
+  </div><!-- /help-grid -->
+
+  <!-- Submit Feedback -->
+  <div class="help-feedback">
+    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 14px;">Submit Feedback</h3>
+    <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">
+      Found a bug or have an idea? Fill in the form below — clicking Submit opens a pre-filled GitHub issue in a new tab.
+    </p>
+    <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; max-width: 600px;">
+      <input id="help-fb-title" type="text" placeholder="Title" class="tag-input" style="width:100%;">
+      <select id="help-fb-type" class="settings-select">
+        <option value="bug">Bug</option>
+        <option value="enhancement">Enhancement</option>
+        <option value="question">Question</option>
+      </select>
+    </div>
+    <textarea id="help-fb-body" placeholder="Describe the issue or idea..." class="tag-input"
+              rows="4" style="width:100%; max-width:600px; margin-top:8px; resize:vertical;"></textarea>
+    <button class="btn" style="margin-top:10px;" onclick="openFeedback()">
+      Submit on GitHub
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:4px;">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    function openFeedback() {
+      const title = document.getElementById('help-fb-title').value.trim();
+      const type  = document.getElementById('help-fb-type').value;
+      const body  = document.getElementById('help-fb-body').value.trim();
+      if (!title) { document.getElementById('help-fb-title').focus(); return; }
+      const base = 'https://github.com/cdeschenes/taglab/issues/new';
+      const params = new URLSearchParams({ title, body, labels: type });
+      window.open(`${base}?${params}`, '_blank');
+    }
+  </script>
+
+</div>

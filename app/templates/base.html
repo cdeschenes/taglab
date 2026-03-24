@@ -142,6 +142,12 @@
   <div class="app-layout">
     <aside class="sidebar" id="sidebar">
       <button class="sidebar-nav-btn"
+              hx-get="/ui/help"
+              hx-target="#editor-panel"
+              hx-swap="innerHTML">
+        Help
+      </button>
+      <button class="sidebar-nav-btn"
               hx-get="/ui/cover-cleanup"
               hx-vals='js:{limit: getCoverLimit()}'
               hx-target="#editor-panel"

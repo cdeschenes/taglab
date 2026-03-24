@@ -911,3 +911,46 @@ th    { text-align: left; font-weight: 600; color: var(--text-dim); font-size: 1
 }
 .restore-btn:hover { background: var(--bg-4); color: var(--accent); }
 .restore-btn-sm { padding: 2px 8px; font-size: 11px; }
+
+/* Help page */
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.help-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.help-card-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.help-icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: var(--radius);
+  background: var(--bg-3);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+}
+.help-card h3 { font-size: 13px; font-weight: 600; margin: 0; }
+.help-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
+.help-list li {
+  font-size: 12px; color: var(--text-dim);
+  padding-left: 13px; position: relative; line-height: 1.4;
+}
+.help-list li::before { content: '·'; position: absolute; left: 2px; color: var(--accent); }
+.help-list li strong { color: var(--text); font-weight: 600; }
+.help-list li code {
+  font-family: monospace; font-size: 11px;
+  background: var(--bg-3); border-radius: 3px; padding: 0 3px;
+  color: var(--text);
+}
+.help-feedback {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-top: 4px;
+}

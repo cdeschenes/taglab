@@ -5,10 +5,7 @@
 - **Implemented.** Performer and Mood added to `STANDARD_TAGS` and the JS `STANDARD` array; both fields now appear in the Standard Fields column of the track editor.
 
 ## Help Page *(medium — content + client-side URL construction, no backend)*
-- Add a Help entry to the sidebar that opens a dedicated Help page in the main content area.
-- **User Guide section**: a scannable manual covering browsing, tag editing, artwork, MusicBrainz, ReplayGain, Lyrics, File Organizer, and settings. Rendered from a static HTML partial — no extra deps.
-- **Submit Feedback section**: fields for Title, Type (Bug / Enhancement / Question), and Description. On submit, open a pre-filled GitHub new-issue URL (`https://github.com/cdeschenes/taglab/issues/new?title=...&body=...&labels=...`) in a new tab — fully client-side, no backend needed.
-- Effort is mostly writing the guide content and wiring up the sidebar link.
+- **Implemented.** Help sidebar button (always visible) opens a card-grid user guide covering all features (Library Explorer, Tag Editing, Cover Art, MusicBrainz, ReplayGain, Lyrics, File Organizer, Trash, Navidrome, Themes). Navidrome and Trash cards are gated on their respective feature flags. Submit Feedback form at the bottom opens a pre-filled GitHub issue in a new tab — fully client-side.
 
 ## Saved Organizer Patterns — Persistent File Storage *(medium — new CRUD API + file I/O)*
 - Currently saved patterns are stored in `localStorage`, which is browser-specific and hard to back up.
