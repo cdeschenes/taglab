@@ -27,6 +27,13 @@
 ## Trash Page — Recovery & Management *(medium-hard — filesystem scan + restore logic + new UI)*
 - **Implemented.** Trash sidebar button (gated on `allow_delete`), hierarchical Artist→Album→Track view with Recover / Restore Album / Restore Artist buttons. Files restored back to original location and re-indexed in the library cache immediately. Empty Trash button on the page mirrors the settings panel action.
 
+## Last.FM Artist Image — Write to Disk *(medium — HTTP download + filesystem write)*
+- When a Last.FM artist image is displayed on the artist page, automatically download and save it to the root of the artist's folder as `artist.<ext>` (e.g. `artist.jpg`).
+- Overwrite the file if a new image is fetched (e.g. artist page is refreshed and Last.FM returns a different image URL).
+- Backend: after fetching the artist image URL from Last.FM, download the image bytes and write them to `{media_root}/{artist_dir}/artist.<ext>`. Derive the extension from the Content-Type or URL.
+- No UI interaction needed — happens automatically when the artist page loads and a photo URL is available.
+- Edge cases: media root is read-only, artist directory doesn't exist yet, Last.FM returns no image.
+
 ## Update Notifications & In-Place Updates *(medium-hard — registry API + optional Docker socket)*
 - On startup (or via a periodic background check), compare the running image digest to the latest digest on `ghcr.io` via the GitHub Container Registry API. Surface a subtle banner or badge in the UI when an update is available.
 - Alternatively, check the GitHub Releases API for a newer tagged version (requires adding a version constant to the app and tagging releases).
