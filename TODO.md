@@ -2,9 +2,7 @@
 # Sorted easiest → hardest to implement
 
 ## Additional ID3 Tag Fields *(easy-to-medium — additive UI work)*
-- Expose remaining tag fields in the track editor: Performer and Mood (Composer, Comment, BPM, Disc Number are already implemented).
-- Backend: add fields to `read_tags()` / `save_tags()` in `flac.py` — Mutagen already supports them.
-- Frontend: add matching `<input>` rows to `track_editor.html`. No new routes needed.
+- **Implemented.** Performer and Mood added to `STANDARD_TAGS` and the JS `STANDARD` array; both fields now appear in the Standard Fields column of the track editor.
 
 ## Help Page *(medium — content + client-side URL construction, no backend)*
 - Add a Help entry to the sidebar that opens a dedicated Help page in the main content area.
