@@ -422,14 +422,27 @@ def run_scan(media_path: Path) -> None:
                         tags[key.lower()] = values[0] if len(values) == 1 else "; ".join(values)
                 cover_pic = next((pic for pic in audio.pictures if pic.type == 3), None)
                 has_cover = cover_pic is not None
+                cover_w = cover_pic.width if cover_pic else None
+                cover_h = cover_pic.height if cover_pic else None
+                # Many encoders leave width/height as 0 in the FLAC Picture block.
+                # Fall back to decoding the image bytes to get actual dimensions.
+                if cover_pic and not cover_w:
+                    try:
+                        import io as _io
+                        from PIL import Image as _Image
+                        _img = _Image.open(_io.BytesIO(cover_pic.data))
+                        cover_w = _img.width
+                        cover_h = _img.height
+                    except Exception:
+                        pass
                 upsert_track(conn, str(f), {
                     "mtime": mtime,
                     "artist_dir": f.parent.parent.name,
                     "album_dir": f.parent.name,
                     "filename": f.name,
                     "has_cover": has_cover,
-                    "cover_w": cover_pic.width if cover_pic else None,
-                    "cover_h": cover_pic.height if cover_pic else None,
+                    "cover_w": cover_w,
+                    "cover_h": cover_h,
                     "sample_rate": audio.info.sample_rate,
                     "bits": audio.info.bits_per_sample,
                     "channels": audio.info.channels,
