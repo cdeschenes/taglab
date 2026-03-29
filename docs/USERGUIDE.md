@@ -31,7 +31,9 @@ on the first run. Subsequent startups use mtime-based incremental
 scanning, so only changed files are re-indexed.
 
 You can trigger a manual rescan any time from the **Settings** panel
-(gear icon in the sidebar).
+(gear icon in the sidebar). Use **Reset & Rescan** to wipe the cache
+entirely and rebuild from scratch if you ever see stale or missing
+entries.
 
 ---
 
@@ -170,6 +172,12 @@ following information from Last.fm:
 - Similar artists (clickable — each one navigates to their artist page)
 
 Without a Last.fm key, this section is hidden.
+
+When Last.fm provides a photo and no local artist image exists, TagLab
+automatically downloads and saves it as `artist.jpg` in the artist's
+folder. The saved photo is used on subsequent visits (no repeated
+downloads). You can replace it at any time using the photo search overlay
+(hover over the artist photo and click the search icon).
 
 ### Album grid
 
@@ -325,6 +333,14 @@ move files back manually.
 Click **Apply** in the preview to move the files. TagLab updates the
 library index immediately so the sidebar reflects the new paths.
 
+### Saved patterns
+
+Click **Save Pattern** in the organizer modal to give the current pattern
+a name. Saved patterns are stored on the server (in `CACHE_PATH`) so they
+persist across browsers and survive a browser data clear. Use the **Load**
+dropdown to apply a saved pattern. Click the **×** next to any saved pattern
+to delete it.
+
 ### Post-move cleanup
 
 After moving files, TagLab optionally removes junk files left in the
@@ -343,6 +359,16 @@ sidebar.
 
 Albums are paginated. Use the **Previous** and **Next** buttons to move
 through pages. The page size is configurable in Settings.
+
+### Sort order
+
+Use the **Sort** dropdown to change how albums are ordered:
+
+| Option | Description |
+|---|---|
+| Missing first | Albums without cover art appear at the top (default) |
+| Size (small → large) | Albums with the smallest pixel area appear first — useful for finding low-resolution covers to replace |
+| Recently added | Albums sorted by the date they were added to Navidrome (or file mtime when Navidrome is not configured) |
 
 ### Adding artwork
 
@@ -372,23 +398,33 @@ A **Move Album to Trash** button appears at the bottom of the Album
 Editor. This moves every file in the album and removes the album from
 the library index.
 
+### Trash page
+
+A trash icon in the sidebar (visible only when `ALLOW_DELETE=true`) opens
+the Trash page, which shows everything currently in `.trash/` organized
+as a hierarchical Artist → Album → Track tree.
+
+From this page you can:
+
+- **Recover** a single track back to its original location
+- **Restore Album** to move an entire album back at once
+- **Restore Artist** to recover all albums and tracks for an artist
+- **Empty Trash** to permanently delete everything in `.trash/`
+
+Recovered files are re-indexed in the library cache immediately.
+
 ### Empty Trash
 
-Nothing moved to trash is permanently deleted until you empty it. Open
-the **Settings** panel (gear icon) and click **Empty Trash** to
-permanently delete everything in the `.trash/` folder.
+Nothing moved to trash is permanently deleted until you empty it. Use
+the **Empty Trash** button on the Trash page, or open the **Settings**
+panel and click **Empty Trash** there.
 
 ---
 
-## Navidrome rescan
+## Navidrome integration
 
-TagLab can trigger a Navidrome library rescan after you finish tagging,
-so your changes appear in Navidrome without waiting for its scheduled
-scan.
-
-### Configuration
-
-In `.env`, set these three variables:
+TagLab integrates with Navidrome via the Subsonic API. Configure it in
+`.env`:
 
 ```
 NAVIDROME_URL=http://navidrome:4533
@@ -399,12 +435,34 @@ NAVIDROME_PASSWORD=yourpassword
 Use the internal Docker hostname if TagLab and Navidrome share a Docker
 network.
 
+### Syncing play counts, favorites, and ratings
+
+Click **Sync Navidrome** in the **Settings** panel to pull the latest
+data from Navidrome into the local cache. This syncs:
+
+- **Play count** — number of times each track has been played
+- **Favorites (♥)** — tracks marked as starred in Navidrome
+- **Star ratings (1–5)** — user ratings set in Navidrome
+
+Once synced, you can filter and sort the library explorer using these
+values. The sync runs in the background and shows a progress indicator
+while running.
+
+### Explorer filters
+
+With Navidrome data synced, the library explorer's **Filters** menu
+exposes:
+
+- **Starred only** — show only albums that have at least one favorited track
+- **Min rating** — filter to albums meeting a minimum average rating (1–5)
+- **Sort: Recently Added** — orders albums by the date Navidrome first
+  indexed them, which is stable and unaffected by tag edits
+
 ### Triggering a rescan
 
-With Navidrome configured, a **Rescan Navidrome** button appears in the
-**Settings** panel. Click it to call the Navidrome Subsonic API and
-start a scan. A confirmation message appears when the scan has been
-queued.
+After tagging, click **Rescan Navidrome** in the **Settings** panel to
+start a Navidrome library scan so your changes appear without waiting for
+its scheduled scan. A confirmation appears when the scan has been queued.
 
 ---
 
@@ -421,7 +479,9 @@ persist across sessions.
 | Theme | Choose from six dark themes: Default, Nord, Dracula, GitHub Dark, Tokyo Night, Catppuccin Mocha |
 | Thumbnail size | Size of album art thumbnails in the sidebar and Artist Page grid |
 | Covers per page | Number of albums shown per page on the Cover Art Cleanup page |
-| Rescan library | Manually trigger a full library re-index |
+| Rescan | Manually trigger an incremental library re-index (new and changed files only) |
+| Reset & Rescan | Delete the SQLite cache and rebuild from scratch — use when the index is out of sync or corrupted |
+| Sync Navidrome | Pull play counts, favorites, and ratings from Navidrome into the local cache (visible only when Navidrome is configured) |
 | Rescan Navidrome | Trigger a Navidrome library scan (visible only when Navidrome is configured) |
 | Empty Trash | Permanently delete everything in `.trash/` (visible only when `ALLOW_DELETE=true`) |
 
@@ -461,3 +521,13 @@ on the selected library.
 
 Switching is per-session. The active library resets to the first one on
 restart.
+
+---
+
+## Help
+
+Click the **Help** button at the top of the sidebar to open the in-app
+user guide. It covers every feature with brief descriptions and is
+always available regardless of which library is active or which features
+are enabled. Use the **Submit Feedback** form at the bottom to open a
+pre-filled GitHub issue in a new tab.

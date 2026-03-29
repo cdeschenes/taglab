@@ -8,11 +8,7 @@
 - **Implemented.** Help sidebar button (always visible) opens a card-grid user guide covering all features (Library Explorer, Tag Editing, Cover Art, MusicBrainz, ReplayGain, Lyrics, File Organizer, Trash, Navidrome, Themes). Navidrome and Trash cards are gated on their respective feature flags. Submit Feedback form at the bottom opens a pre-filled GitHub issue in a new tab — fully client-side.
 
 ## Saved Organizer Patterns — Persistent File Storage *(medium — new CRUD API + file I/O)*
-- Currently saved patterns are stored in `localStorage`, which is browser-specific and hard to back up.
-- Create a `patterns/` folder (at the config level) where each saved pattern is stored as a small JSON file.
-- New API routes needed: `GET /api/patterns`, `POST /api/patterns`, `DELETE /api/patterns/{name}`.
-- Frontend: replace `localStorage` reads/writes with fetch calls to the new endpoints.
-- Makes patterns portable across browsers and machines, and easy to back up.
+- **Implemented.** Patterns now stored in `cache_path/organizer_patterns.json` via three API routes (`GET/POST/DELETE /api/patterns`). Frontend migrates any existing `localStorage` patterns on first load. Patterns are now portable across browsers and machines.
 
 ## "The" Article Handling for Organizer *(medium — config option + string transform logic)*
 - When organizing by Album Artist, add an option to sort/file under the non-article form.

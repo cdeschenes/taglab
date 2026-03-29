@@ -11,7 +11,7 @@ from app import config
 from app.config import settings
 from app.routes import (
     album, artist, artwork, auth_views, cover_cleanup, explorer,
-    help, lastfm, libraries, library, lyrics, metadata, musicbrainz, navidrome, organizer, player, replaygain, trash,
+    help, lastfm, libraries, library, lyrics, metadata, musicbrainz, navidrome, organizer, patterns, player, replaygain, trash,
 )
 from app.services import library_cache
 
@@ -32,8 +32,8 @@ templates = Jinja2Templates(directory="app/templates")
 for router in [
     auth_views.router, album.router, artist.router, artwork.router, cover_cleanup.router,
     explorer.router, help.router, lastfm.router, libraries.router, library.router, lyrics.router,
-    metadata.router, musicbrainz.router, navidrome.router, organizer.router, player.router,
-    replaygain.router, trash.router,
+    metadata.router, musicbrainz.router, navidrome.router, organizer.router, patterns.router,
+    player.router, replaygain.router, trash.router,
 ]:
     app.include_router(router)
 

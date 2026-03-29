@@ -41,7 +41,7 @@ function organizeModal(previews, paths, currentPattern, currentTarget) {
     _dragSrcIdx: null,
     _dragoverIdx: null,
     _nextId: 1,
-    savedPatterns: JSON.parse(localStorage.getItem('taglab-org-patterns') || '[]'),
+    savedPatterns: [],
     showLoadMenu: false,
 
     init() {
@@ -50,6 +50,25 @@ function organizeModal(previews, paths, currentPattern, currentTarget) {
       this.separators = parsed.separators;
       this.$watch('pattern', () => this._schedulePreview());
       this.$watch('target', () => this._schedulePreview());
+      fetch('/api/patterns')
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          this.savedPatterns = data;
+          // One-time migration from localStorage
+          const legacy = JSON.parse(localStorage.getItem('taglab-org-patterns') || '[]');
+          if (legacy.length > 0 && data.length === 0) {
+            Promise.all(legacy.map(p =>
+              fetch('/api/patterns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p),
+              })
+            )).then(() => {
+              localStorage.removeItem('taglab-org-patterns');
+              return fetch('/api/patterns').then(r => r.json());
+            }).then(migrated => { this.savedPatterns = migrated; });
+          }
+        });
     },
 
     _parsePattern(pattern) {
@@ -91,16 +110,20 @@ function organizeModal(previews, paths, currentPattern, currentTarget) {
       this.onPatternChange();
     },
 
-    savePattern() {
+    async savePattern() {
       const hint = this.tokens.map(t => this.tokenLabel(t.value)).join('-');
       const name = prompt('Save pattern as:', hint);
       if (!name || !name.trim()) return;
       const trimmed = name.trim();
-      const updated = this.savedPatterns.filter(p => p.name !== trimmed);
-      updated.push({ name: trimmed, pattern: this.pattern });
-      this.savedPatterns = updated;
-      localStorage.setItem('taglab-org-patterns', JSON.stringify(updated));
-      showNotification('Pattern saved');
+      const resp = await fetch('/api/patterns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed, pattern: this.pattern }),
+      });
+      if (resp.ok) {
+        this.savedPatterns = await fetch('/api/patterns').then(r => r.json());
+        showNotification('Pattern saved');
+      }
     },
 
     loadPattern(pattern) {
@@ -111,10 +134,9 @@ function organizeModal(previews, paths, currentPattern, currentTarget) {
       this.onPatternChange();
     },
 
-    deletePattern(name) {
-      const updated = this.savedPatterns.filter(p => p.name !== name);
-      this.savedPatterns = updated;
-      localStorage.setItem('taglab-org-patterns', JSON.stringify(updated));
+    async deletePattern(name) {
+      await fetch('/api/patterns/' + encodeURIComponent(name), { method: 'DELETE' });
+      this.savedPatterns = this.savedPatterns.filter(p => p.name !== name);
     },
 
     dragStart(idx) { this._dragSrcIdx = idx; },

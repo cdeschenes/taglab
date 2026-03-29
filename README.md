@@ -15,9 +15,9 @@ Inspired by [metadata-remote](https://github.com/wow-signal-dev/metadata-remote)
   MusicBrainz IDs) and per-track tags in one view
 - Bulk-apply shared fields across all tracks in an album
 - Upload, replace, or delete cover art, with a dedicated cleanup view for
-  albums missing artwork
+  albums missing artwork; sort by size to find low-resolution covers
 - Artist info page with bio, stats, similar artists, and artist photo via
-  Last.fm
+  Last.fm; artist photo auto-saves to disk on first visit
 - Multi-library support: configure multiple music libraries and switch between
   them at runtime
 - ReplayGain calculation via ffmpeg EBU R128 (album and track gain, preview
@@ -25,13 +25,18 @@ Inspired by [metadata-remote](https://github.com/wow-signal-dev/metadata-remote)
 - MusicBrainz lookup to auto-fill metadata from a release search
 - Synchronized lyrics support via LRCLib
 - File organizer: rename and move files into a consistent folder structure
-  based on tags
+  based on tags, with server-side saved patterns
 - Move to Trash: safely delete albums or individual tracks (moved to
-  `.trash/` inside your media root, not permanently removed)
-- Navidrome integration: trigger a library rescan after tagging
-- SQLite-backed library index for fast browsing of large collections
+  `.trash/` inside your media root, not permanently removed); dedicated
+  Trash page for bulk recovery by track, album, or artist
+- Navidrome integration: sync play counts, favorites (♥), and star ratings
+  (1–5) from Navidrome; filter and sort the library explorer by those values;
+  trigger a full or incremental library rescan
+- SQLite-backed library index for fast browsing of large collections; Reset &
+  Rescan option wipes the cache and rebuilds from scratch
 - Six built-in dark themes (Default, Nord, Dracula, GitHub Dark, Tokyo Night,
   Catppuccin Mocha)
+- In-app Help page covering every feature
 - Login page with persistent cookie-based sessions; HTTP Basic auth also
   supported for API access
 
@@ -164,7 +169,7 @@ only settings you must change. Everything else is optional.
 | `ORGANIZE_TARGET` | *(disabled)* | Root path files are moved to when using the organizer. Leave empty to disable. |
 | `ORGANIZE_PATTERN` | `{album_artist}/{album}/{track:02d} - {title}.flac` | Filename pattern for the organizer. Tokens: `{album_artist}` `{album}` `{title}` `{track}` `{disc}` `{year}` `{genre}` |
 | `ORGANIZE_CLEANUP_PATTERNS` | `._*,*.bak,.DS_Store,Thumbs.db` | Comma-separated glob patterns deleted from source directories after a move. Set to empty to disable cleanup. |
-| `NAVIDROME_URL` | *(disabled)* | Navidrome base URL. Leave empty to disable the rescan button. |
+| `NAVIDROME_URL` | *(disabled)* | Navidrome base URL. Enables the Navidrome sync and rescan buttons, and unlocks explorer filters for favorites and star ratings. Leave empty to disable. |
 | `NAVIDROME_USER` | | Navidrome username |
 | `NAVIDROME_PASSWORD` | | Navidrome password |
 | `LASTFM_API_KEY` | *(disabled)* | Last.fm API key. Enables the artist info page (bio, stats, similar artists, artist photo). Get a free key at [last.fm/api](https://www.last.fm/api/account/create). |
@@ -196,8 +201,8 @@ updates immediately so the sidebar reflects the change without a rescan.
 Python and FastAPI on the backend, with Mutagen for tag reading and writing.
 Frontend uses HTMX, Alpine.js, and Jinja2 templates. ReplayGain via ffmpeg's
 ebur128 filter. MusicBrainz lookups via musicbrainzngs. Lyrics from LRCLib.
-Library index in SQLite with mtime-based incremental scanning. Docker base
-image is Python 3.12 Alpine.
+Navidrome integration via the Subsonic API. Library index in SQLite with
+mtime-based incremental scanning. Docker base image is Python 3.12 slim.
 
 ---
 
