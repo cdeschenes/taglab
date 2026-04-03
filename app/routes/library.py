@@ -41,3 +41,14 @@ async def scan_status(_: str = Depends(require_auth)):
 async def library_stats(_: str = Depends(require_auth)):
     conn = library_cache.get_db(settings.media_path)
     return library_cache.get_stats(conn)
+
+
+@router.get("/api/logs")
+async def get_logs(_: str = Depends(require_auth)):
+    """Return the last 1000 lines of the application log file."""
+    log_file = settings.cache_path / "taglab.log"
+    if not log_file.exists():
+        return {"lines": [], "note": "Log file not found — logs are going to stdout only. Restart the container to begin writing to disk."}
+    text = log_file.read_text(errors="replace")
+    lines = text.splitlines()
+    return {"lines": lines[-1000:]}

@@ -236,6 +236,22 @@
 
   </div><!-- /help-grid -->
 
+  <!-- Debug Log -->
+  <div style="margin-bottom: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">Debug Log</h3>
+    <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 10px;">
+      View the last 1000 lines of the application log to help diagnose issues.
+    </p>
+    <button class="btn" onclick="showDebugLog()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:middle;">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+        <line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/>
+      </svg>
+      Debug Log
+    </button>
+  </div>
+
   <!-- Submit Feedback -->
   <div class="help-feedback">
     <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 14px;">Submit Feedback</h3>
@@ -262,6 +278,42 @@
   </div>
 
   <script>
+    async function showDebugLog() {
+      showModal(`
+        <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <h2>Debug Log</h2>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-sm" id="debug-log-copy">Copy</button>
+            <button class="btn btn-sm" onclick="hideModal()">Close</button>
+          </div>
+        </div>
+        <div class="modal-body" style="padding:0;">
+          <pre id="debug-log-pre"
+               style="margin:0;padding:12px 16px;font-size:11px;line-height:1.5;
+                      overflow-y:auto;max-height:60vh;white-space:pre-wrap;word-break:break-all;
+                      background:var(--bg-1);color:var(--text-dim);">Loading\u2026</pre>
+        </div>
+      `);
+      try {
+        const resp = await fetch('/api/logs');
+        const data = resp.ok ? await resp.json() : null;
+        const pre = document.getElementById('debug-log-pre');
+        if (!data || !data.lines.length) {
+          pre.textContent = data?.note ?? 'No log data available.';
+        } else {
+          pre.textContent = data.lines.join('\n');
+          pre.scrollTop = pre.scrollHeight;
+        }
+        document.getElementById('debug-log-copy').addEventListener('click', () => {
+          navigator.clipboard.writeText(pre.textContent)
+            .then(() => showNotification('Log copied to clipboard'));
+        });
+      } catch (e) {
+        const pre = document.getElementById('debug-log-pre');
+        if (pre) pre.textContent = 'Error fetching log: ' + e.message;
+      }
+    }
+
     function openFeedback() {
       const title = document.getElementById('help-fb-title').value.trim();
       const type  = document.getElementById('help-fb-type').value;

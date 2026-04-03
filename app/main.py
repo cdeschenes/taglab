@@ -1,5 +1,8 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -16,8 +19,19 @@ from app.routes import (
 from app.services import library_cache
 
 
+def _setup_file_logging(log_file: Path) -> None:
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    handler = RotatingFileHandler(str(log_file), maxBytes=5 * 1024 * 1024, backupCount=2)
+    handler.setFormatter(logging.Formatter(
+        "%(asctime)s %(levelname)-8s %(name)s  %(message)s"
+    ))
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "app"):
+        logging.getLogger(name).addHandler(handler)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _setup_file_logging(settings.cache_path / "taglab.log")
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, library_cache.run_scan, settings.media_path)
     yield
