@@ -8,6 +8,17 @@ All notable changes to TagLab are documented here.
 
 ---
 
+## [0.4.0] — 2026-04-03
+
+### Added
+- **Debug Log button on Help page** — opens a modal showing the last 1000 lines of `CACHE_PATH/taglab.log`. Application and uvicorn access/error logs are written to this file on startup via a `RotatingFileHandler` (5 MB, 2 backups). Includes a Copy to Clipboard button. Useful for diagnosing issues without needing `docker logs` access.
+- **`app/version.py`** — single source of truth for the application version. `help.html` version badge and the MusicBrainz user-agent string now both read from this file.
+
+### Removed
+- **Navidrome filters on Cover Clean-Up page** — the Favorites Only and Min Rating dropdowns have been removed. Navidrome filtering belongs in the library explorer sidebar only; the Cover Clean-Up page is a maintenance tool and should always show all albums.
+
+---
+
 ## [0.3.0] — 2026-03-28
 
 ### Added

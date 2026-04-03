@@ -5,8 +5,10 @@ from typing import Optional
 
 import musicbrainzngs
 
+from app.version import __version__
+
 musicbrainzngs.set_useragent(
-    "TagLab", "0.1.0", "https://github.com/cdeschenes/taglab"
+    "TagLab", __version__, "https://github.com/cdeschenes/taglab"
 )
 
 
