@@ -8,6 +8,14 @@ All notable changes to TagLab are documented here.
 
 ---
 
+## [0.4.1] — 2026-04-03
+
+### Documentation
+- README and User Guide now fully document the Debug Log viewer on the Help page: what it shows (last 1000 lines of `taglab.log`), how to use the Copy button, and when it is useful.
+- User Guide Help section split into three subsections: general overview, Debug Log, and Submit Feedback.
+
+---
+
 ## [0.4.0] — 2026-04-03
 
 ### Added
