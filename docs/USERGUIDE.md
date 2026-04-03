@@ -529,5 +529,19 @@ restart.
 Click the **Help** button at the top of the sidebar to open the in-app
 user guide. It covers every feature with brief descriptions and is
 always available regardless of which library is active or which features
-are enabled. Use the **Submit Feedback** form at the bottom to open a
-pre-filled GitHub issue in a new tab.
+are enabled.
+
+### Debug Log
+
+Click **Debug Log** to open a scrollable modal showing the last 1000
+lines of the application log (`taglab.log` in `CACHE_PATH`). The log
+includes uvicorn access and error output alongside application-level
+messages. Use it to diagnose scan failures, tag write errors, or API
+timeouts. A **Copy** button copies the full log text to the clipboard.
+
+### Submit Feedback
+
+Use the **Submit Feedback** form at the bottom to open a pre-filled
+GitHub issue in a new tab. Fill in a title, choose a type (Bug,
+Enhancement, or Question), add a description, and click **Submit on
+GitHub**.

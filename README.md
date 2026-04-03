@@ -36,7 +36,9 @@ Inspired by [metadata-remote](https://github.com/wow-signal-dev/metadata-remote)
   Rescan option wipes the cache and rebuilds from scratch
 - Six built-in dark themes (Default, Nord, Dracula, GitHub Dark, Tokyo Night,
   Catppuccin Mocha)
-- In-app Help page covering every feature
+- In-app Help page covering every feature, with a Debug Log viewer (last
+  1000 lines of the application log) and a feedback form that opens a
+  pre-filled GitHub issue
 - Login page with persistent cookie-based sessions; HTTP Basic auth also
   supported for API access
 
